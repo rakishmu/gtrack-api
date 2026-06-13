@@ -1,0 +1,86 @@
+# Python
+
+**pycache**/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+
+venv/
+env/
+ENV/
+.venv/
+
+# Django
+
+*.log
+db.sqlite3
+db.sqlite3-journal
+
+# Django Media
+
+media/
+
+# Static files collected by collectstatic
+
+staticfiles/
+
+# Environment variables
+
+.env
+.env.*
+
+# VS Code
+
+.vscode/
+
+# Visual Studio
+
+.vs/
+*.user
+*.suo
+
+# PyCharm
+
+.idea/
+
+# Distribution / packaging
+
+build/
+dist/
+*.egg-info/
+
+# Testing
+
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Migrations (optional)
+
+# Uncomment if you don't want to track migrations
+
+# */migrations/*
+
+# !*/migrations/**init**.py
+
+# WSL / Linux temporary files
+
+*.swp
+*.swo
+*~
+
+# OS Files
+
+.DS_Store
+Thumbs.db
+
+# PostgreSQL dumps
+
+*.sql
+*.dump
+
+# Logs
+
+logs/
+*.log
