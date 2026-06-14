@@ -36,6 +36,26 @@ def longlatExtractor(longlat):
 
 
 
+
+
+def totalashintant(request):
+
+    with connections['default'].cursor() as cursor:
+            cursor.execute("""
+            select  count(v.vehicle_id ) from vehicles v  ;
+            """)
+
+            rows = cursor.fetchall()
+            
+            payload = []
+
+            for row in rows:    
+                data={}
+                data["count"] = row[0]
+                
+                payload.append(data)
+    return JsonResponse(payload, safe=False)
+
 def regencycount(request):
 
     with connections['default'].cursor() as cursor:
