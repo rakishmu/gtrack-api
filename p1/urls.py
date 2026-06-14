@@ -8,6 +8,10 @@ urlpatterns = [
     # path('geofence/', views.geofence, name='geofence'),
     path('alsintan', views.alsintan, name='alsintan'),
     path('distribution', views.distribution, name='distribution'),
+    path('distributiondetail/<str:distribution_id>/', views.distributiondetail, name='distributiondetail'),
+
+
+
 
 
 

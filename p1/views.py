@@ -90,16 +90,38 @@ def purjunal(request):
 #     }
 # )
 
-def distribution(request):
+def distributiondetail(request,distribution_id):
+     
 
+     payload = {
+          "bergerak" : 0,
+          "diam" : 0,
+          "berhenti" : 0,
+          "not_conected" : 0,
+          "not_active" : 0,
+          "never_active" : 0,
+        #   "bergerak" : 0,
+     }
+     return JsonResponse(payload, safe=False)
+     
+
+
+     
+
+def distribution(request):
+    if cache.get("distribution") is not None:
+            print("Key exists")
+             # print(cache.get("name"))
+            print("Using Caching")
+            payload = cache.get("distribution")
     with connections['default'].cursor() as cursor:
                 cursor.execute("""
                 SELECT
-                COALESCE(v.group_name, 'Total') AS group_name,
+                COALESCE(v.category_group_name, 'Total') AS group_name,
                 COUNT(*) AS total
                 FROM vehicles v
-                GROUP BY ROLLUP(v.group_name)
-                ORDER BY (v.group_name IS NULL) ASC, total DESC;
+                GROUP BY ROLLUP(v.category_group_name)
+                ORDER BY (v.category_group_name IS NULL) ASC, total DESC;
                 """)
 
                 rows = cursor.fetchall()
@@ -111,7 +133,8 @@ def distribution(request):
                     data["group_name"] = row[0]
                     data["total"] = row[1]
                     payload.append(data)
-                return JsonResponse(payload, safe=False)
+                cache.set("distribution", payload, timeout=300)    
+    return JsonResponse(payload, safe=False)
 
 
 
