@@ -36,6 +36,44 @@ def longlatExtractor(longlat):
 
 
 
+def testdrive(request):
+    with connections['second'].cursor() as cursor:
+            cursor.execute("""
+           SELECT td.uniqueid ,
+      td.positionid ,
+      tp.id,
+      tp.speed,
+      tp.servertime ,
+      tp.devicetime ,
+      td.disabled ,
+      td.status
+      FROM tc_devices td
+      inner JOIN tc_positions tp ON td.positionid  = tp.id
+            """)
+
+            rows = cursor.fetchall()
+            
+            data1 = []
+
+            for row in rows:    
+                data={}
+                data["td_uid"] = row[0]
+                data["td_postid"] = row[1]
+                data["tp_id"] = row[2]
+                data["tp_speed"] = row[3]
+                data["tp_servertime"] = row[4]
+                data["tp_deviceti,e"] = row[5]
+                data["td_disabled"] = row[6]
+                data["td.status"] = row[7]
+                # data["tp_speed"] = row[3]
+
+                
+                data1.append(data)
+
+
+
+    return JsonResponse(data1, safe=False)
+     
 
 
 def totalashintant(request):
@@ -168,12 +206,24 @@ def kabupatenhourvskm(request):
 
     with connections['default'].cursor() as cursor:
             cursor.execute("""
-                SELECT 
-                v.regency , 
-                SUM(v.engine_hours::NUMERIC) AS sum_engine_hour,    
-                SUM(v.distance_km::NUMERIC) AS sum_distance      
-                FROM vehicles v 
-                GROUP BY v.regency;
+SELECT
+    v.regency,
+    SUM(
+        CASE
+            WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
+            THEN v.engine_hours::NUMERIC
+            ELSE 0
+        END
+    ) AS sum_engine_hour,
+    SUM(
+        CASE
+            WHEN v.distance_km ~ '^[0-9]+(\.[0-9]+)?$'
+            THEN v.distance_km::NUMERIC
+            ELSE 0
+        END
+    ) AS sum_distance
+FROM vehicles v
+GROUP BY v.regency;
             """)
 
             rows = cursor.fetchall()

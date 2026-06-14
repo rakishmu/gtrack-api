@@ -17,6 +17,8 @@ urlpatterns = [
     path('provincecount', views.provincecount, name='provincecount'),
     path('regencycount', views.regencycount, name='regencycount'),
     path('totalashintant', views.totalashintant, name='totalashintant'),
+    path('testdrive', views.testdrive, name='testdrive'),
+
 
 
 

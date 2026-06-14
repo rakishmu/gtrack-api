@@ -109,11 +109,11 @@ DATABASES = {
 
     'second': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'db_second',
-        'USER': 'postgres',
-        'PASSWORD': 'password',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': 'gtrack',
+        'USER': 'gtrack',
+        'PASSWORD': 'gtra1ck2Ns',
+        'HOST': '192.168.171.11',
+        'PORT': '6432',
     }
 }
 
