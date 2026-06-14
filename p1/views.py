@@ -37,6 +37,7 @@ def longlatExtractor(longlat):
 
 
 def testdrive(request,refas):
+    
     bergerak = 0
     diam = 0
     berhenti = 0
@@ -48,13 +49,23 @@ def testdrive(request,refas):
     # 1. AMBIL DAFTAR IMEI DARI DATABASE UTAMA (VEHICLES)
     imei_list = []
     with connections['default'].cursor() as cursor:
-        cursor.execute("""
-            SELECT v.imei 
-            FROM vehicles v 
-            WHERE v.imei != '' 
-              AND v.category_group_name != '' 
-              AND v.category_group_name ilike %s;
-        """,[refas])
+
+        if refas =="all":
+            cursor.execute("""
+                SELECT v.imei 
+                FROM vehicles v 
+                WHERE v.imei != '' 
+                AND v.category_group_name != '' 
+            """)
+        else:
+             
+            cursor.execute("""
+                SELECT v.imei 
+                FROM vehicles v 
+                WHERE v.imei != '' 
+                AND v.category_group_name != '' 
+                AND v.category_group_name ilike %s;
+            """,[refas])
         rows = cursor.fetchall()
         
         # Bersihkan string imei langsung saat dimasukkan ke list
