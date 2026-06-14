@@ -5,7 +5,7 @@ from django.db import connections
 from django.views.decorators.csrf import csrf_exempt
 from django.core.cache import cache
 
-
+import json
 
 
 
@@ -36,44 +36,150 @@ def longlatExtractor(longlat):
 
 
 
-def testdrive(request):
-    with connections['second'].cursor() as cursor:
-            cursor.execute("""
-           SELECT td.uniqueid ,
-      td.positionid ,
-      tp.id,
-      tp.speed,
-      tp.servertime ,
-      tp.devicetime ,
-      td.disabled ,
-      td.status
-      FROM tc_devices td
-      inner JOIN tc_positions tp ON td.positionid  = tp.id
-            """)
+def testdrive(request,refas):
+    bergerak = 0
+    diam = 0
+    berhenti = 0
+    not_conected = 0
+    not_actived = 0
+    never_conected = 0 
+    payload = []  # List ini akan kita gunakan untuk menampung hasil akhir dari Traccar
 
-            rows = cursor.fetchall()
-            
-            data1 = []
+    # 1. AMBIL DAFTAR IMEI DARI DATABASE UTAMA (VEHICLES)
+    imei_list = []
+    with connections['default'].cursor() as cursor:
+        cursor.execute("""
+            SELECT v.imei 
+            FROM vehicles v 
+            WHERE v.imei != '' 
+              AND v.category_group_name != '' 
+              AND v.category_group_name ilike %s;
+        """,[refas])
+        rows = cursor.fetchall()
+        
+        # Bersihkan string imei langsung saat dimasukkan ke list
+        imei_list = [str(row[0]).strip() for row in rows if row[0]]
 
-            for row in rows:    
-                data={}
-                data["td_uid"] = row[0]
-                data["td_postid"] = row[1]
-                data["tp_id"] = row[2]
-                data["tp_speed"] = row[3]
-                data["tp_servertime"] = row[4]
-                data["tp_deviceti,e"] = row[5]
-                data["td_disabled"] = row[6]
-                data["td.status"] = row[7]
-                # data["tp_speed"] = row[3]
+    # 2. AMBIL DATA DARI DATABASE KEDUA (TRACCAR) MENGGUNAKAN KLAUSA "IN"
+    if imei_list:
+        # Buat string placeholder %s dinamis sebanyak jumlah imei
+        placeholders = ", ".join(["%s"] * len(imei_list))
 
+        with connections['second'].cursor() as cursor:
+            cursor.execute(f"""
+                SELECT 
+                    td.uniqueid,
+                    td.positionid,
+                    tp.id,
+                    tp.speed,
+                    tp.servertime,
+                    tp.devicetime,
+                    td.disabled,
+                    td.status,
+                    tp.attributes
+                FROM tc_devices td
+                INNER JOIN tc_positions tp ON td.positionid = tp.id
+                WHERE td.uniqueid IN ({placeholders});
+            """, imei_list)
+
+            traccar_rows = cursor.fetchall()
+
+            # Format hasil query Traccar ke dalam bentuk list of dictionary (JSON)
+            #
+            for row in traccar_rows:
+                speed = row[3]
+                status = row[7].strip()
+                disable = row[6]
+                attributes_raw = row[8]
+                # event_name = "unknown"
+                motion_status = False
+                ignation = False
+
+                # {"priority":1,"sat":0,"event":246,"ignition":false,"motion":false,"io80":4,"rssi":5,"io69":3,"in1":false,"out1":false,"io246":1,"power":12.393,"io206":60054,"battery":4.067,"io68":0,"io9":0,"axisX":126,"axisY":75,"axisZ":-10,"operator":51001,"odometer":3000,"io12":332003,"io11":894447440000,"io14":3560794,"distance":0.0,"totalDistance":4.739835508374251}
+                if attributes_raw:
+                    try:
+                        # Ubah string JSON menjadi Python Dictionary
+                        attr_dict = json.loads(attributes_raw) 
+                        
+                        # Ambil properti 'event' dan 'motion' di dalamnya
+                        # event_name = attr_dict.get("event", "unknown")
+                        motion_status = attr_dict.get("motion", False)
+                        ignation = attr_dict.get("ignition", False)
+
+                        print(f"IMEI: {row[0]} -> disable: {disable},status: {status}, ignation: {ignation}, Motion: {motion_status}, Event: {event_name}")
+                    except Exception as e:
+                        # Berjaga-jaga jika format JSON rusak di database
+                        pass
                 
-                data1.append(data)
+                    
+                    if disable == False and status == "online" and ignation == True and motion_status ==True:
+                        bergerak += 1
+                    elif  ignation == True and motion_status ==False:
+                        diam+=1
+                    elif disable == False and status == "online" and ignation == False:
+                        berhenti+=1
+                    elif disable == False and status == "unknown":
+                        not_conected+=1
+                    elif disable == True:
+                        not_actived+=1
+                    else:
+                        never_conected+=1
+                        
+                
+                # # if(disable == False and status == "online" )
 
 
+                # #tc_device disable = off
+                # #status = online
+                # #ignation true
+                # ##motion true
+                # if speed > 0:
+                #      bergerak+=1
 
-    return JsonResponse(data1, safe=False)
-     
+
+                # #ignation true motion false
+                # if status == "online" and speed == 0:
+                #      diam +=1
+
+                # #disable =false
+                # #status = online
+                # #ignation =off
+                # #state berhenti
+
+
+                # #disable off
+                # #status = ofline
+                # #tidak terhubung
+
+
+                # #positon_id = null
+                # never_conected
+                
+
+                combined = {
+                    "imei": row[0],
+                    "td_postid": row[1],
+                    "tp_id": row[2],
+                    "tp_speed": row[3],
+                    "tp_servertime": row[4],
+                    "tp_devicetime": row[5],  
+                    "td_disabled": row[6],
+                    "td_status": row[7].strip() if row[7] else "unknown"
+                }
+                payload.append(combined)
+
+    # Mengintip hasil akhir yang sudah matang di terminal
+    print(len(payload))
+
+    # 3. KEMBALIKAN HASIL PELACAKAN TRACCAR KE BROWSER/API
+    return JsonResponse( {
+          "bergerak" : bergerak,
+          "diam" : diam,
+          "berhenti" : berhenti,
+          "not_conected" : not_conected,
+          "not_active" : not_actived,
+          "never_active" : never_conected,
+     }, safe=False)
 
 
 def totalashintant(request):
@@ -162,7 +268,7 @@ def jenisalsintan(request):
 
     with connections['default'].cursor() as cursor:
             cursor.execute("""
-select v.vehicle_name , count(v.vehicle_id ) from vehicles v group by v.vehicle_name 
+            select v.vehicle_name , count(v.vehicle_id ) from vehicles v group by v.vehicle_name 
 
             """)
 
@@ -354,19 +460,19 @@ def purjunal(request):
 #     }
 # )
 
-def distributiondetail(request,distribution_id):
+# def distributiondetail(request,distribution_id):
      
 
-     payload = {
-          "bergerak" : 0,
-          "diam" : 0,
-          "berhenti" : 0,
-          "not_conected" : 0,
-          "not_active" : 0,
-          "never_active" : 0,
-        #   "bergerak" : 0,
-     }
-     return JsonResponse(payload, safe=False)
+#      payload = {
+#           "bergerak" : 0,
+#           "diam" : 0,
+#           "berhenti" : 0,
+#           "not_conected" : 0,
+#           "not_active" : 0,
+#           "never_active" : 0,
+#         #   "bergerak" : 0,
+#      }
+#      return JsonResponse(payload, safe=False)
      
 
 
