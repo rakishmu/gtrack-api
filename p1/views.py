@@ -270,7 +270,7 @@ def selectdistribution(request, gn):
                         v.category_group_name as group_name,  
                         COUNT(v.vehicle_id) AS total 
                     FROM vehicles v
-                    WHERE v.category_group_name = %s
+                    WHERE v.category_group_name ILIKE %s
                     GROUP BY v.category_group_name;
                 """,[gn])
                 rows = cursor.fetchall()
