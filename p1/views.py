@@ -3,46 +3,70 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.db import connections
 from django.views.decorators.csrf import csrf_exempt
+from django.core.cache import cache
+
+
+
+
+
+
+
+def longlatExtractor():
+    pass
+
+
+
 
 def purjunal(request):
 
-
-    with connections['default'].cursor() as cursor:
-        cursor.execute("""
-        select v.vehicle_merk ,v.latitude_longitude , v.province , v.regency   from vehicles v 
-        """)
-
-        rows = cursor.fetchall()
+    if cache.get("purjurnal") is not None:
+        print("Key exists")
         
-        payload = []
+        # print(cache.get("name"))
+        print("Using Caching")
+        payload = cache.get("purjurnal")
+    else:
 
-        for row in rows:
-            data = {}
-            latlong = row[1].split(",")
+        with connections['default'].cursor() as cursor:
+            cursor.execute("""
+            select v.vehicle_merk ,v.latitude_longitude , v.province , v.regency   from vehicles v 
+            """)
+
+            rows = cursor.fetchall()
             
-            # print(latlong)
-            idx = 0
-            lat =""
-            long = ""
-            for la in latlong:
-            # print(lat)
-                if idx ==0 or idx == 1:
-                    
-                    lat += la + "." if idx == 0 else la
-                if idx == 2 or idx == 3:
-                    long +=la + "." if idx == 2 else la
+            payload = []
 
-                idx+=1
-            data["lat"] = lat
-            data["lng"] = long
-            data["provinsi"] = row[2]
-            data["kabupaten"] = row[3]
-            data["merk"] = row[0]
+            for row in rows:
+                data = {}
+                latlong = row[1].split(",")
+                
+                # print(latlong)
+                idx = 0
+                lat =""
+                long = ""
+                for la in latlong:
+                # print(lat)
+                    if idx ==0 or idx == 1:
+                        
+                        lat += la + "." if idx == 0 else la
+                    if idx == 2 or idx == 3:
+                        long +=la + "." if idx == 2 else la
 
-            payload.append(data)
-            
-        print(payload)
+                    idx+=1
+                data["lat"] = lat
+                data["lng"] = long
+                data["provinsi"] = row[2]
+                data["kabupaten"] = row[3]
+                data["merk"] = row[0]
+
+                payload.append(data)
+            cache.set("purjurnal", payload, timeout=300)    
+        # print(payload)
+        print("Key does not exist")
+    
       
+
+    
 
 
     return JsonResponse(payload, safe=False)
@@ -91,30 +115,41 @@ def services(request):
 
 def geofence(request):
 
-    with connections['default'].cursor() as cursor:
-        cursor.execute("""
-        select v.vin , v.engine_number , v.vehicle_name ,v.vehicle_merk ,v.vehicle_type ,v.province ,v.regency  from vehicles v 
-        """)
 
-        rows = cursor.fetchall()
-        
-        payload = []
+     # def purjunal(request):
+    if cache.get("geofence") is not None:
+            print("Key exists")
+             # print(cache.get("name"))
+            print("Using Caching")
+            payload = cache.get("geofence")
+    else:
 
-        for row in rows:
-            data = {}
-            print(row)
-            data["nomorRangka"] = row[0]
-            data["nomorMesin"] = row[1]
-            data["namaBarang"] = row[2]
-            data["merk"] = row[3]
-            data["tipe"] = row[4]
-            data["provinsi"] = row[5]
-            data["kabupaten"] = row[6]
-            data["event"] = None
-            data["time"] = None 
-            payload.append(data)
+
+        with connections['default'].cursor() as cursor:
+            cursor.execute("""
+            select v.vin , v.engine_number , v.vehicle_name ,v.vehicle_merk ,v.vehicle_type ,v.province ,v.regency  from vehicles v 
+            """)
+
+            rows = cursor.fetchall()
             
-        print(payload)
+            payload = []
+
+            for row in rows:
+                data = {}
+                print(row)
+                data["nomorRangka"] = row[0]
+                data["nomorMesin"] = row[1]
+                data["namaBarang"] = row[2]
+                data["merk"] = row[3]
+                data["tipe"] = row[4]
+                data["provinsi"] = row[5]
+                data["kabupaten"] = row[6]
+                data["event"] = None
+                data["time"] = None 
+                payload.append(data)
+                
+            print(payload)
+            cache.set("geofence", payload, timeout=300)    
 
     return JsonResponse(payload, safe=False)
 
@@ -138,76 +173,82 @@ def geofence(request):
 
 def alsintan(request):
     # def purjunal(request):
+    if cache.get("alsintan") is not None:
+            print("Key exists")
+             # print(cache.get("name"))
+            print("Using Caching")
+            payload = cache.get("alsintan")
+    else:
 
+        with connections['default'].cursor() as cursor:
+            cursor.execute("""
+                        select v.vehicle_id,
+                        v.vehicle_year ,
+                        v.vin ,
+                        v.engine_number ,
+                        v.vehicle_name ,
+                        v.vehicle_merk ,
+                        v.vehicle_type ,
+                        v.recipient_party ,
+                        v.recipient_group ,
+                        v.recipient_name ,
+                        v.phone_number ,
+                        v.recipient_address ,
+                        v.province ,
+                        v.regency ,
+                        v.subdistrict ,
+                        v.ward ,
+                        v.engine_hours ,
+                        v.distance_km ,
+                        v.latitude_longitude 
+                        from vehicles v 
+            """)
 
-    with connections['default'].cursor() as cursor:
-        cursor.execute("""
-                    select v.vehicle_id,
-                    v.vehicle_year ,
-                    v.vin ,
-                    v.engine_number ,
-                    v.vehicle_name ,
-                    v.vehicle_merk ,
-                    v.vehicle_type ,
-                    v.recipient_party ,
-                    v.recipient_group ,
-                    v.recipient_name ,
-                    v.phone_number ,
-                    v.recipient_address ,
-                    v.province ,
-                    v.regency ,
-                    v.subdistrict ,
-                    v.ward ,
-                    v.engine_hours ,
-                    v.distance_km ,
-                    v.latitude_longitude 
-                    from vehicles v 
-        """)
-
-        rows = cursor.fetchall()
-        
-        payload = []
-
-        for row in rows:
-            data = {}
-            latlong = row[18].split(",")
+            rows = cursor.fetchall()
             
-            # print(latlong)
-            idx = 0
-            lat =""
-            long = ""
-            for la in latlong:
-            # print(lat)
-                if idx ==0 or idx == 1:
-                    
-                    lat += la + "." if idx == 0 else la
-                if idx == 2 or idx == 3:
-                    long +=la + "." if idx == 2 else la
+            payload = []
 
-                idx+=1
+            for row in rows:
+                data = {}
+                latlong = row[18].split(",")
+                
+                # print(latlong)
+                idx = 0
+                lat =""
+                long = ""
+                for la in latlong:
+                # print(lat)
+                    if idx ==0 or idx == 1:
+                        
+                        lat += la + "." if idx == 0 else la
+                    if idx == 2 or idx == 3:
+                        long +=la + "." if idx == 2 else la
 
-            data["id"] = row[0]
-            data["tahun"] = row[1]
-            data["nomorRangka"] = row[2]
-            data["nomorMesin"] = row[3]
-            data["namaBarang"] = row[4]
-            data["merk"] = row[5]
-            data["tipe"] = row[6]
-            data["pihak"] = row[7]
-            data["kelompok"] = row[8]
-            data["nama"] = row[9]
-            data["telp"] = row[10]
-            data["alamat"] = row[11]
-            data["provinsi"] = row[12]
-            data["kabupaten"] = row[13]
-            data["kecamatan"] = row[14]
-            data["kelurahan"] = row[15]
-            data["engineHour"] = row[16]
-            data["km"] = row[17]
-            data["lat"] = lat
-            data["lng"] = long
-            data["lastUpdated"] = None
-            payload.append(data)
+                    idx+=1
+
+                data["id"] = row[0]
+                data["tahun"] = row[1]
+                data["nomorRangka"] = row[2]
+                data["nomorMesin"] = row[3]
+                data["namaBarang"] = row[4]
+                data["merk"] = row[5]
+                data["tipe"] = row[6]
+                data["pihak"] = row[7]
+                data["kelompok"] = row[8]
+                data["nama"] = row[9]
+                data["telp"] = row[10]
+                data["alamat"] = row[11]
+                data["provinsi"] = row[12]
+                data["kabupaten"] = row[13]
+                data["kecamatan"] = row[14]
+                data["kelurahan"] = row[15]
+                data["engineHour"] = row[16]
+                data["km"] = row[17]
+                data["lat"] = lat
+                data["lng"] = long
+                data["lastUpdated"] = None
+                payload.append(data)
+            cache.set("alsintan", payload, timeout=300)    
 
 
     return JsonResponse(payload, safe=False)
