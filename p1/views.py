@@ -50,7 +50,7 @@ def testdrive(request,refas):
     imei_list = []
     with connections['default'].cursor() as cursor:
 
-        if refas =="all":
+        if refas =="semua":
             cursor.execute("""
                 SELECT v.imei 
                 FROM vehicles v 
