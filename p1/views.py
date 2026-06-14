@@ -117,11 +117,11 @@ def distribution(request):
     with connections['default'].cursor() as cursor:
                 cursor.execute("""
                 SELECT
-                COALESCE(v.category_group_name, 'Total') AS group_name,
+                COALESCE(v.recipient_group, 'Total') AS group_name,
                 COUNT(*) AS total
                 FROM vehicles v
-                GROUP BY ROLLUP(v.category_group_name)
-                ORDER BY (v.category_group_name IS NULL) ASC, total DESC;
+                GROUP BY ROLLUP(v.recipient_group)
+                ORDER BY (v.recipient_group IS NULL) ASC, total DESC;
                 """)
 
                 rows = cursor.fetchall()
