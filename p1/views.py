@@ -183,26 +183,26 @@ def recipientgrouphourvskm(request):
     with connections['default'].cursor() as cursor:
             cursor.execute("""
 
-                         SELECT
-    v.category_group_name,
-    SUM(
-        CASE
-            WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
-            THEN v.engine_hours::NUMERIC
-            ELSE 0
-        END
-    ) AS sum_engine_hour,
-    SUM(
-        CASE
-            WHEN v.distance_km ~ '^[0-9]+(\.[0-9]+)?$'
-            THEN v.distance_km::NUMERIC
-            ELSE 0
-        END
-    ) AS sum_distance
-FROM vehicles v
-WHERE v.category_group_name IS NOT NULL
-  AND v.category_group_name <> ''
-GROUP BY v.category_group_name;
+                SELECT
+                v.category_group_name,
+                SUM(
+                    CASE
+                        WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
+                        THEN v.engine_hours::NUMERIC
+                        ELSE 0
+                    END
+                ) AS sum_engine_hour,
+                SUM(
+                    CASE
+                        WHEN v.distance_km ~ '^[0-9]+(\.[0-9]+)?$'
+                        THEN v.distance_km::NUMERIC
+                        ELSE 0
+                    END
+                ) AS sum_distance
+            FROM vehicles v
+            WHERE v.category_group_name IS NOT NULL
+            AND v.category_group_name <> ''
+            GROUP BY v.category_group_name;
             """)
 
             rows = cursor.fetchall()
@@ -221,26 +221,27 @@ def kabupatenhourvskm(request):
 
     with connections['default'].cursor() as cursor:
             cursor.execute("""
-SELECT
-    v.regency,
-    SUM(
-        CASE
-            WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
-            THEN v.engine_hours::NUMERIC
-            ELSE 0
-        END
-    ) AS sum_engine_hour,
-    SUM(
-        CASE
-            WHEN v.distance_km ~ '^[0-9]+(\.[0-9]+)?$'
-            THEN v.distance_km::NUMERIC
-            ELSE 0
-        END
-    ) AS sum_distance
-FROM vehicles v
-WHERE v.regency IS NOT NULL
-  AND v.regency <> ''
-GROUP BY v.regency;
+            SELECT
+                v.regency,
+                SUM(
+                    CASE
+                        WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
+                        THEN v.engine_hours::NUMERIC
+                        ELSE 0
+                    END
+                ) AS sum_engine_hour,
+                SUM(
+                    CASE
+                        WHEN v.distance_km ~ '^[0-9]+(\.[0-9]+)?$'
+                        THEN v.distance_km::NUMERIC
+                        ELSE 0
+                    END
+                ) AS sum_distance
+            FROM vehicles v
+            WHERE v.regency IS NOT NULL
+            AND v.regency <> ''
+            AND v.regency != 'Brigade Dinas'
+            GROUP BY v.regency;
             """)
 
             rows = cursor.fetchall()
