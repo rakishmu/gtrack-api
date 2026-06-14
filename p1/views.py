@@ -217,6 +217,46 @@ def recipientgrouphourvskm(request):
                 payload.append(data)
     return JsonResponse(payload, safe=False)
     
+
+ 
+def provhourvskm(request):
+
+    with connections['default'].cursor() as cursor:
+            cursor.execute("""
+            SELECT
+                v.province,
+                SUM(
+                    CASE
+                        WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
+                        THEN v.engine_hours::NUMERIC
+                        ELSE 0
+                    END
+                ) AS sum_engine_hour,
+                SUM(
+                    CASE
+                        WHEN v.distance_km ~ '^[0-9]+(\.[0-9]+)?$'
+                        THEN v.distance_km::NUMERIC
+                        ELSE 0
+                    END
+                ) AS sum_distance
+            FROM vehicles v
+            WHERE v.province IS NOT NULL
+            AND v.province <> ''
+            GROUP BY v.province;
+            """)
+
+            rows = cursor.fetchall()
+            
+            payload = []
+
+            for row in rows:    
+                data={}
+                data["regency"] = row[0].upper()
+                data["sum_engine_hours"] = row[1]
+                data["sum_distance_km"] = row[2]
+                payload.append(data)
+    return JsonResponse(payload, safe=False)
+
 def kabupatenhourvskm(request):
 
     with connections['default'].cursor() as cursor:

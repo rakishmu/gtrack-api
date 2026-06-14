@@ -18,6 +18,9 @@ urlpatterns = [
     path('regencycount', views.regencycount, name='regencycount'),
     path('totalashintant', views.totalashintant, name='totalashintant'),
     path('testdrive', views.testdrive, name='testdrive'),
+    path('provhourvskm', views.provhourvskm, name='provhourvskm'),
+
+
 
 
 
