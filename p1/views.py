@@ -90,6 +90,32 @@ def purjunal(request):
 #     }
 # )
 
+def distribution(request):
+
+    with connections['default'].cursor() as cursor:
+                cursor.execute("""
+                SELECT
+                COALESCE(v.group_name, 'Total') AS group_name,
+                COUNT(*) AS total
+                FROM vehicles v
+                GROUP BY ROLLUP(v.group_name)
+                ORDER BY (v.group_name IS NULL) ASC, total DESC;
+                """)
+
+                rows = cursor.fetchall()
+                
+                payload = []
+
+                for row in rows:
+                    data={}
+                    data["group_name"] = row[0]
+                    data["total"] = row[1]
+                    payload.append(data)
+                return JsonResponse(payload, safe=False)
+
+
+
+
 def services(request):
      
 
