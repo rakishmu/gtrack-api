@@ -183,8 +183,8 @@ def recipientgrouphourvskm(request):
     with connections['default'].cursor() as cursor:
             cursor.execute("""
 
-                           SELECT
-    v.recipient_group,
+                         SELECT
+    v.category_group_name,
     SUM(
         CASE
             WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
@@ -200,7 +200,9 @@ def recipientgrouphourvskm(request):
         END
     ) AS sum_distance
 FROM vehicles v
-GROUP BY v.recipient_group;
+WHERE v.category_group_name IS NOT NULL
+  AND v.category_group_name <> ''
+GROUP BY v.category_group_name;
             """)
 
             rows = cursor.fetchall()
