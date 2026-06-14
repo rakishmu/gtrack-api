@@ -182,12 +182,25 @@ def recipientgrouphourvskm(request):
 
     with connections['default'].cursor() as cursor:
             cursor.execute("""
-              SELECT 
-                v.recipient_group  , 
-                SUM(v.engine_hours::NUMERIC) AS sum_engine_hour,    
-                SUM(v.distance_km::NUMERIC) AS sum_distance      
-                FROM vehicles v 
-                GROUP BY v.recipient_group;
+
+                           SELECT
+    v.recipient_group,
+    SUM(
+        CASE
+            WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
+            THEN v.engine_hours::NUMERIC
+            ELSE 0
+        END
+    ) AS sum_engine_hour,
+    SUM(
+        CASE
+            WHEN v.distance_km ~ '^[0-9]+(\.[0-9]+)?$'
+            THEN v.distance_km::NUMERIC
+            ELSE 0
+        END
+    ) AS sum_distance
+FROM vehicles v
+GROUP BY v.recipient_group;
             """)
 
             rows = cursor.fetchall()
