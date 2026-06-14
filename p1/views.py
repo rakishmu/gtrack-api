@@ -102,7 +102,7 @@ def recipmentcount(request):
 
     with connections['default'].cursor() as cursor:
             cursor.execute("""
-select v.recipient_group  , count(v.vehicle_id ) from vehicles v group by v.recipient_group 
+select v.category_group_name  , count(v.vehicle_id ) from vehicles v group by v.category_group_name 
 
             """)
 
