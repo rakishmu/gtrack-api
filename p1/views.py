@@ -11,9 +11,25 @@ from django.core.cache import cache
 
 
 
-def longlatExtractor():
-    pass
+def longlatExtractor(longlat):
 
+    longlat= longlat.split(",")
+    idx = 0
+    lat =""
+    long = ""
+    for la in longlat:
+                # print(lat)
+        if idx ==0 or idx == 1:
+                        
+            lat += la + "." if idx == 0 else la
+        if idx == 2 or idx == 3:
+            long +=la + "." if idx == 2 else la
+
+        idx+=1
+
+
+    return (lat,long)
+    
 
 
 
@@ -37,22 +53,8 @@ def purjunal(request):
             payload = []
 
             for row in rows:
-                data = {}
-                latlong = row[1].split(",")
-                
-                # print(latlong)
-                idx = 0
-                lat =""
-                long = ""
-                for la in latlong:
-                # print(lat)
-                    if idx ==0 or idx == 1:
-                        
-                        lat += la + "." if idx == 0 else la
-                    if idx == 2 or idx == 3:
-                        long +=la + "." if idx == 2 else la
-
-                    idx+=1
+                data = {} 
+                lat ,long =longlatExtractor(row[1])
                 data["lat"] = lat
                 data["lng"] = long
                 data["provinsi"] = row[2]
@@ -89,13 +91,41 @@ def purjunal(request):
 # )
 
 def services(request):
-    return JsonResponse(   {
-        "nama": "NAMA BENGKEL", 
-        "provinsi": "PROVINSI", 
-        "kabupaten": "KABUPATEN", 
-        "alamat": "ALAMAT"
-    }
-)
+     
+
+ # def purjunal(request):
+    if cache.get("services") is not None:
+            print("Key exists")
+             # print(cache.get("name"))
+            print("Using Caching")
+            payload = cache.get("services")
+    else:
+            
+        with connections['default'].cursor() as cursor:
+                cursor.execute("""
+                select * from services 
+                """)
+
+                rows = cursor.fetchall()
+                
+                payload = []
+
+                for row in rows:
+                    data={}
+                    print(row)
+                    lat ,long =longlatExtractor(row[2])
+
+                    data["id"] = row[0]
+                    data["name"] = row[1]
+                    data["lat"] = lat
+                    data["long"] = long
+                    data["provinsi"] = row[3]
+                    data["kabupaten"] = row[4]
+                    data["alamat"] = row[5]
+                    data["phone"] = row[6]
+                    payload.append(data)
+                    cache.set("services", payload, timeout=300)    
+    return JsonResponse(payload, safe=False)
 
 # def geofence(request):
 #     return JsonResponse(   {
