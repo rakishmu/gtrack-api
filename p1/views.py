@@ -238,6 +238,8 @@ SELECT
         END
     ) AS sum_distance
 FROM vehicles v
+WHERE v.regency IS NOT NULL
+  AND v.regency <> ''
 GROUP BY v.regency;
             """)
 
