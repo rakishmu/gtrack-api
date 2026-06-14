@@ -29,9 +29,124 @@ def longlatExtractor(longlat):
 
 
     return (lat,long)
+
+
+# select v.province   , count(v.vehicle_id ) from vehicles v group by v.province ;
+# select v.regency    , count(v.vehicle_id ) from vehicles v group by v.regency ;
+
+
+
+def provincecount(request):
+
+    with connections['default'].cursor() as cursor:
+            cursor.execute("""
+select v.province   , count(v.vehicle_id ) from vehicles v group by v.province ;
+            """)
+
+            rows = cursor.fetchall()
+            
+            payload = []
+
+            for row in rows:    
+                data={}
+                data["province"] = row[0].upper()
+                data["count"] = row[1]
+                
+                payload.append(data)
+    return JsonResponse(payload, safe=False)
+
+
+
+def recipmentcount(request):
+
+    with connections['default'].cursor() as cursor:
+            cursor.execute("""
+select v.recipient_group  , count(v.vehicle_id ) from vehicles v group by v.recipient_group 
+
+            """)
+
+            rows = cursor.fetchall()
+            
+            payload = []
+
+            for row in rows:    
+                data={}
+                data["recipment_group"] = row[0].upper()
+                data["count"] = row[1]
+                
+                payload.append(data)
+    return JsonResponse(payload, safe=False)
+
+
+
+def jenisalsintan(request):
+
+    with connections['default'].cursor() as cursor:
+            cursor.execute("""
+select v.vehicle_name , count(v.vehicle_id ) from vehicles v group by v.vehicle_name 
+
+            """)
+
+            rows = cursor.fetchall()
+            
+            payload = []
+
+            for row in rows:    
+                data={}
+                data["vehivle_name"] = row[0].upper()
+                data["count"] = row[1]
+                
+                payload.append(data)
+    return JsonResponse(payload, safe=False)
+
+def recipientgrouphourvskm(request):
+
+    with connections['default'].cursor() as cursor:
+            cursor.execute("""
+              SELECT 
+                v.recipient_group  , 
+                SUM(v.engine_hours::NUMERIC) AS sum_engine_hour,    
+                SUM(v.distance_km::NUMERIC) AS sum_distance      
+                FROM vehicles v 
+                GROUP BY v.recipient_group;
+            """)
+
+            rows = cursor.fetchall()
+            
+            payload = []
+
+            for row in rows:    
+                data={}
+                data["recipient_group"] = row[0].upper()
+                data["sum_engine_hours"] = row[1]
+                data["sum_distance_km"] = row[2]
+                payload.append(data)
+    return JsonResponse(payload, safe=False)
     
+def kabupatenhourvskm(request):
 
+    with connections['default'].cursor() as cursor:
+            cursor.execute("""
+                SELECT 
+                v.regency , 
+                SUM(v.engine_hours::NUMERIC) AS sum_engine_hour,    
+                SUM(v.distance_km::NUMERIC) AS sum_distance      
+                FROM vehicles v 
+                GROUP BY v.regency;
+            """)
 
+            rows = cursor.fetchall()
+            
+            payload = []
+
+            for row in rows:    
+                data={}
+                data["regency"] = row[0].upper()
+                data["sum_engine_hours"] = row[1]
+                data["sum_distance_km"] = row[2]
+                payload.append(data)
+    return JsonResponse(payload, safe=False)
+    
 
 def purjunal(request):
 
@@ -106,7 +221,37 @@ def distributiondetail(request,distribution_id):
      
 
 
+def selectdistribution(request, gn):
      
+     with connections['default'].cursor() as cursor:
+                cursor.execute("""
+                    SELECT 
+                        v.recipient_group as group_name,  
+                        COUNT(v.vehicle_id) AS total 
+                    FROM vehicles v
+                    WHERE v.recipient_group = %s
+                    GROUP BY v.recipient_group;
+                """,[gn])
+                rows = cursor.fetchall()
+                # FIX 2: Validasi jika data tidak ditemukan agar tidak IndexError
+                if rows:
+                    # rows[0] adalah baris pertama hasil query, misalnya: ('UPJA', 45)
+                    payload = {
+                        "group_name": rows[0][0],  # Baris ke-0, Kolom ke-0 (recipient_group)
+                        "total": rows[0][1]       # Baris ke-0, Kolom ke-1 (total)
+                    }
+                else:
+                    # Jika grup tidak ditemukan di database, return data kosong / default
+                    payload = {
+                        "group_name": gn,
+                        "total": 0
+                    }
+
+     return JsonResponse(payload, safe=False)
+
+     
+
+
 
 def distribution(request):
     if cache.get("distribution") is not None:
