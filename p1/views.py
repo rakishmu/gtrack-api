@@ -36,6 +36,27 @@ def longlatExtractor(longlat):
 
 
 
+def regencycount(request):
+
+    with connections['default'].cursor() as cursor:
+            cursor.execute("""
+            select v.regency   , count(v.vehicle_id ) from vehicles v group by v.regency ;
+            """)
+
+            rows = cursor.fetchall()
+            
+            payload = []
+
+            for row in rows:    
+                data={}
+                data["regency"] = row[0].upper()
+                data["count"] = row[1]
+                
+                payload.append(data)
+    return JsonResponse(payload, safe=False)
+
+
+
 def provincecount(request):
 
     with connections['default'].cursor() as cursor:
