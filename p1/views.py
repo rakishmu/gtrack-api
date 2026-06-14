@@ -267,11 +267,11 @@ def selectdistribution(request, gn):
      with connections['default'].cursor() as cursor:
                 cursor.execute("""
                     SELECT 
-                        v.recipient_group as group_name,  
+                        v.category_group_name as group_name,  
                         COUNT(v.vehicle_id) AS total 
                     FROM vehicles v
-                    WHERE v.recipient_group = %s
-                    GROUP BY v.recipient_group;
+                    WHERE v.category_group_name = %s
+                    GROUP BY v.category_group_name;
                 """,[gn])
                 rows = cursor.fetchall()
                 # FIX 2: Validasi jika data tidak ditemukan agar tidak IndexError
