@@ -39,8 +39,20 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'p1',
-    'corsheaders'
+    'corsheaders',    
+    'rest_framework',
+    'drf_spectacular',
 ]
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Gtrack API',
+    'DESCRIPTION': 'Gtrack API Documentation',
+    'VERSION': '1.0.0',
+}
 
 CORS_ALLOW_ALL_ORIGINS = True
 
