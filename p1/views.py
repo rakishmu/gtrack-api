@@ -40,6 +40,9 @@ def longlatExtractor(longlat):
 
 @api_view(['GET'])
 def testdrive(request,refas):
+
+
+    print("this giw")
     
     bergerak = 0
     diam = 0
@@ -98,8 +101,11 @@ def testdrive(request,refas):
     FROM vehicles v
     """
 
+    if conditions:
+        qry += " WHERE " + " AND ".join(conditions)
 
-
+    print(qry)
+    print(params)
     with connections['default'].cursor() as cursor:
         cursor.execute(qry, params)
         rows = cursor.fetchall()
@@ -153,7 +159,7 @@ def testdrive(request,refas):
                         motion_status = attr_dict.get("motion", False)
                         ignation = attr_dict.get("ignition", False)
 
-                        print(f"IMEI: {row[0]} -> disable: {disable},status: {status}, ignation: {ignation}, Motion: {motion_status}, Event: {event_name}")
+                        # print(f"IMEI: {row[0]} -> disable: {disable},status: {status}, ignation: {ignation}, Motion: {motion_status}, Event: {event_name}")
                     except Exception as e:
                         # Berjaga-jaga jika format JSON rusak di database
                         pass
