@@ -21,6 +21,7 @@ urlpatterns = [
     path('totalashintant', views.totalashintant, name='totalashintant'),
     path('testdrive', views.testdrive, name='testdrive'),
     path('provhourvskm', views.provhourvskm, name='provhourvskm'),
+    path('average-engine-hours/<str:category>/', views.average_engine_hours, name='average_engine_hours'),
     
 
 

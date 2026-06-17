@@ -941,3 +941,41 @@ def alsintan(request):
 #     }
 
 # )
+
+
+@api_view(['GET'])
+def average_engine_hours(request, category):
+    category_lower = category.lower().strip()
+    with connections['default'].cursor() as cursor:
+        if category_lower == "alsintan":
+            cursor.execute(r"""
+                SELECT AVG(
+                    CASE
+                        WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
+                        THEN v.engine_hours::NUMERIC
+                        ELSE NULL
+                    END
+                ) AS avg_hours
+                FROM vehicles v
+            """)
+        else:
+            cursor.execute(r"""
+                SELECT AVG(
+                    CASE
+                        WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
+                        THEN v.engine_hours::NUMERIC
+                        ELSE NULL
+                    END
+                ) AS avg_hours
+                FROM vehicles v
+                WHERE v.category_group_name ILIKE %s
+            """, [category_lower])
+        
+        row = cursor.fetchone()
+        avg_val = float(row[0]) if row[0] is not None else 0.0
+        
+    return JsonResponse({
+        "category": category,
+        "average_engine_hours": avg_val
+    })
+
