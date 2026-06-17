@@ -4,8 +4,10 @@ from django.http import JsonResponse
 from django.db import connections
 from django.views.decorators.csrf import csrf_exempt
 from django.core.cache import cache
+from rest_framework.decorators import api_view
 
 import json
+
 
 
 
@@ -36,6 +38,7 @@ def longlatExtractor(longlat):
 
 
 
+@api_view(['GET'])
 def testdrive(request,refas):
     
     bergerak = 0
@@ -193,6 +196,7 @@ def testdrive(request,refas):
      }, safe=False)
 
 
+@api_view(['GET'])
 def totalashintant(request):
 
     with connections['default'].cursor() as cursor:
@@ -211,6 +215,7 @@ def totalashintant(request):
                 payload.append(data)
     return JsonResponse(payload, safe=False)
 
+@api_view(['GET'])
 def regencycount(request):
 
     with connections['default'].cursor() as cursor:
@@ -232,6 +237,7 @@ def regencycount(request):
 
 
 
+@api_view(['GET'])
 def provincecount(request):
 
     with connections['default'].cursor() as cursor:
@@ -253,6 +259,7 @@ select v.province   , count(v.vehicle_id ) from vehicles v group by v.province ;
 
 
 
+@api_view(['GET'])
 def recipmentcount(request):
 
     with connections['default'].cursor() as cursor:
@@ -275,6 +282,7 @@ select v.category_group_name  , count(v.vehicle_id ) from vehicles v group by v.
 
 
 
+@api_view(['GET'])
 def jenisalsintan(request):
 
     with connections['default'].cursor() as cursor:
@@ -295,10 +303,11 @@ def jenisalsintan(request):
                 payload.append(data)
     return JsonResponse(payload, safe=False)
 
+@api_view(['GET'])
 def recipientgrouphourvskm(request):
 
     with connections['default'].cursor() as cursor:
-            cursor.execute("""
+            cursor.execute(r"""
 
                 SELECT
                 v.category_group_name,
@@ -336,10 +345,11 @@ def recipientgrouphourvskm(request):
     
 
  
+@api_view(['GET'])
 def provhourvskm(request):
 
     with connections['default'].cursor() as cursor:
-            cursor.execute("""
+            cursor.execute(r"""
             SELECT
                 v.province,
                 SUM(
@@ -374,10 +384,11 @@ def provhourvskm(request):
                 payload.append(data)
     return JsonResponse(payload, safe=False)
 
+@api_view(['GET'])
 def kabupatenhourvskm(request):
 
     with connections['default'].cursor() as cursor:
-            cursor.execute("""
+            cursor.execute(r"""
             SELECT
                 v.regency,
                 SUM(
@@ -414,6 +425,7 @@ def kabupatenhourvskm(request):
     return JsonResponse(payload, safe=False)
     
 
+@api_view(['GET'])
 def purjunal(request):
 
     if cache.get("purjurnal") is not None:
@@ -487,6 +499,7 @@ def purjunal(request):
      
 
 
+@api_view(['GET'])
 def selectdistribution(request, gn):
      
      with connections['default'].cursor() as cursor:
@@ -519,6 +532,7 @@ def selectdistribution(request, gn):
 
 
 
+@api_view(['GET'])
 def distribution(request):
     if cache.get("distribution") is not None:
             print("Key exists")
@@ -550,6 +564,7 @@ def distribution(request):
 
 
 
+@api_view(['GET'])
 def services(request):
      
 
@@ -603,6 +618,7 @@ def services(request):
 
 
 
+@api_view(['GET'])
 def geofence(request):
 
 
@@ -661,6 +677,7 @@ def geofence(request):
 )
 
 
+@api_view(['GET'])
 def alsintan(request):
     # def purjunal(request):
     if cache.get("alsintan") is not None:
