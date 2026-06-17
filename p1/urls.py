@@ -22,6 +22,7 @@ urlpatterns = [
     path('testdrive', views.testdrive, name='testdrive'),
     path('provhourvskm', views.provhourvskm, name='provhourvskm'),
     path('average-engine-hours/<str:category>/', views.average_engine_hours, name='average_engine_hours'),
+    path('average-distance-km/<str:category>/', views.average_distance_km, name='average_distance_km'),
     
 
 
