@@ -116,7 +116,7 @@ def testdrive(request,refas):
                         attr_dict = json.loads(attributes_raw) 
                         
                         # Ambil properti 'event' dan 'motion' di dalamnya
-                        # event_name = attr_dict.get("event", "unknown")
+                        event_name = attr_dict.get("event", "unknown")
                         motion_status = attr_dict.get("motion", False)
                         ignation = attr_dict.get("ignition", False)
 
@@ -194,6 +194,134 @@ def testdrive(request,refas):
           "not_active" : not_actived,
           "never_active" : never_conected,
      }, safe=False)
+
+
+@api_view(['GET'])
+def testdrive_detail(request, refas, status):
+    # Normalize status parameter
+    status_lower = status.lower().strip()
+    target_status = status_lower
+    if status_lower == "not_connected":
+        target_status = "not_conected"
+    elif status_lower == "not_active":
+        target_status = "not_actived"
+    elif status_lower == "never_active":
+        target_status = "never_conected"
+
+    # 1. AMBIL DAFTAR IMEI & METADATA DARI DATABASE UTAMA (VEHICLES)
+    vehicle_metadata = {}
+    with connections['default'].cursor() as cursor:
+        if refas == "semua":
+            cursor.execute("""
+                SELECT v.imei, v.vehicle_name, v.vehicle_merk, v.plate_number, 
+                       v.recipient_name, v.province, v.regency, v.category_group_name
+                FROM vehicles v 
+                WHERE v.imei != '' 
+                AND v.category_group_name != '' 
+            """)
+        else:
+            cursor.execute("""
+                SELECT v.imei, v.vehicle_name, v.vehicle_merk, v.plate_number, 
+                       v.recipient_name, v.province, v.regency, v.category_group_name
+                FROM vehicles v 
+                WHERE v.imei != '' 
+                AND v.category_group_name != '' 
+                AND v.category_group_name ilike %s;
+            """, [refas])
+        rows = cursor.fetchall()
+        
+        for row in rows:
+            if row[0]:
+                imei = str(row[0]).strip()
+                vehicle_metadata[imei] = {
+                    "vehicle_name": row[1] if row[1] else "",
+                    "vehicle_merk": row[2] if row[2] else "",
+                    "plate_number": row[3] if row[3] else "",
+                    "recipient_name": row[4] if row[4] else "",
+                    "province": row[5] if row[5] else "",
+                    "regency": row[6] if row[6] else "",
+                    "category_group_name": row[7] if row[7] else ""
+                }
+    
+    imei_list = list(vehicle_metadata.keys())
+    payload = []
+
+    # 2. AMBIL DATA DARI DATABASE KEDUA (TRACCAR) MENGGUNAKAN KLAUSA "IN"
+    if imei_list:
+        placeholders = ", ".join(["%s"] * len(imei_list))
+        with connections['second'].cursor() as cursor:
+            cursor.execute(f"""
+                SELECT 
+                    td.uniqueid,
+                    td.positionid,
+                    tp.id,
+                    tp.speed,
+                    tp.servertime,
+                    tp.devicetime,
+                    td.disabled,
+                    td.status,
+                    tp.attributes
+                FROM tc_devices td
+                INNER JOIN tc_positions tp ON td.positionid = tp.id
+                WHERE td.uniqueid IN ({placeholders});
+            """, imei_list)
+
+            traccar_rows = cursor.fetchall()
+
+            for row in traccar_rows:
+                imei = row[0].strip() if row[0] else ""
+                speed = row[3]
+                status_val = row[7].strip() if row[7] else "unknown"
+                disable = row[6]
+                attributes_raw = row[8]
+                motion_status = False
+                ignation = False
+
+                if attributes_raw:
+                    try:
+                        attr_dict = json.loads(attributes_raw) 
+                        motion_status = attr_dict.get("motion", False)
+                        ignation = attr_dict.get("ignition", False)
+                    except Exception as e:
+                        pass
+                
+                # Classify status matching testdrive classification logic
+                item_status = "never_conected"
+                if disable == False and status_val == "online" and ignation == True and motion_status == True:
+                    item_status = "bergerak"
+                elif ignation == True and motion_status == False:
+                    item_status = "diam"
+                elif disable == False and status_val == "online" and ignation == False:
+                    item_status = "berhenti"
+                elif disable == False and status_val == "unknown":
+                    item_status = "not_conected"
+                elif disable == True:
+                    item_status = "not_actived"
+
+                if item_status == target_status:
+                    meta = vehicle_metadata.get(imei, {})
+                    combined = {
+                        "imei": imei,
+                        "vehicle_name": meta.get("vehicle_name", ""),
+                        "vehicle_merk": meta.get("vehicle_merk", ""),
+                        "plate_number": meta.get("plate_number", ""),
+                        "recipient_name": meta.get("recipient_name", ""),
+                        "province": meta.get("province", ""),
+                        "regency": meta.get("regency", ""),
+                        "category_group_name": meta.get("category_group_name", ""),
+                        "td_postid": row[1],
+                        "tp_id": row[2],
+                        "tp_speed": row[3],
+                        "tp_servertime": row[4],
+                        "tp_devicetime": row[5],  
+                        "td_disabled": row[6],
+                        "td_status": status_val,
+                        "ignition": ignation,
+                        "motion": motion_status
+                    }
+                    payload.append(combined)
+
+    return JsonResponse(payload, safe=False)
 
 
 @api_view(['GET'])
