@@ -571,7 +571,7 @@ def subdistriccount(request):
 
     for row in rows:
         payload.append({
-            "regency": (row[0] or "").upper(),
+            "subdistric": (row[0] or "").upper(),
             "count": row[1]
         })
 
@@ -635,7 +635,7 @@ def wardcount(request):
 
     for row in rows:
         payload.append({
-            "regency": (row[0] or "").upper(),
+            "ward": (row[0] or "").upper(),
             "count": row[1]
         })
 
