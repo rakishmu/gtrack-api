@@ -4,11 +4,13 @@ from django.http import JsonResponse
 from django.db import connections
 from django.views.decorators.csrf import csrf_exempt
 from django.core.cache import cache
+from rest_framework.decorators import api_view
 
 import json
 
 
 # Create your views here.
+@api_view(['GET'])
 def GetProvince(request):
 
     with connections['default'].cursor() as cursor:
@@ -27,6 +29,7 @@ def GetProvince(request):
     return JsonResponse(payload, safe=False)
 
 
+@api_view(['GET'])
 def Getregency(request,province):
 
     with connections['default'].cursor() as cursor:
@@ -44,6 +47,7 @@ def Getregency(request,province):
                 payload.append( row[0])
     return JsonResponse(payload, safe=False)
 
+@api_view(['GET'])
 def Getsubdistrict(request,regency):
 
     with connections['default'].cursor() as cursor:
@@ -62,6 +66,7 @@ def Getsubdistrict(request,regency):
     return JsonResponse(payload, safe=False)
 
 
+@api_view(['GET'])
 def Getward(request,regency,subdistrict):
 
     with connections['default'].cursor() as cursor:
