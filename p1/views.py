@@ -455,6 +455,47 @@ def purjunal(request):
     return JsonResponse(payload, safe=False)
 
 
+def purjunal(request,year=None,provience=None):
+
+    if cache.get("purjurnal") is not None:
+        print("Key exists")
+        
+        # print(cache.get("name"))
+        print("Using Caching")
+        payload = cache.get("purjurnal")
+    else:
+
+        with connections['default'].cursor() as cursor:
+            cursor.execute("""
+            select v.vehicle_merk ,v.latitude_longitude , v.province , v.regency   from vehicles v 
+            """)
+
+            rows = cursor.fetchall()
+            
+            payload = []
+
+            for row in rows:
+                data = {} 
+                lat ,long =longlatExtractor(row[1])
+                data["lat"] = lat
+                data["lng"] = long
+                data["provinsi"] = row[2]
+                data["kabupaten"] = row[3]
+                data["merk"] = row[0]
+
+                payload.append(data)
+            cache.set("purjurnal", payload, timeout=300)    
+        # print(payload)
+        print("Key does not exist")
+    
+      
+
+    
+
+
+    return JsonResponse(payload, safe=False)
+
+
 
 # const purnajual = [
    
@@ -662,7 +703,64 @@ def geofence(request):
 
 
 def alsintan(request):
-    # def purjunal(request):
+
+    year = request.GET.get('year', '').strip()
+    province = request.GET.get('province', '').strip()
+    regency = request.GET.get('regency', '').strip()
+    subdistrict = request.GET.get('subdistrict', '').strip()
+    ward = request.GET.get('ward', '').strip()
+
+    qry = """
+    SELECT
+        v.vehicle_id,
+        v.vehicle_year,
+        v.vin,
+        v.engine_number,
+        v.vehicle_name,
+        v.vehicle_merk,
+        v.vehicle_type,
+        v.recipient_party,
+        v.recipient_group,
+        v.recipient_name,
+        v.phone_number,
+        v.recipient_address,
+        v.province,
+        v.regency,
+        v.subdistrict,
+        v.ward,
+        v.engine_hours,
+        v.distance_km,
+        v.latitude_longitude
+    FROM vehicles v
+    """
+
+    conditions = []
+    params = []
+
+    if year:
+        conditions.append("v.vehicle_year = %s")
+        params.append(year)
+
+    if province:
+        conditions.append("v.province ILIKE %s")
+        params.append(province)
+
+    if regency:
+        conditions.append("v.regency ILIKE %s")
+        params.append(regency)
+
+    if subdistrict:
+        conditions.append("v.subdistrict ILIKE %s")
+        params.append(subdistrict)
+
+    if ward:
+        conditions.append("v.ward ILIKE %s")
+        params.append(ward)
+
+    if conditions:
+        qry += " WHERE " + " AND ".join(conditions)
+    # print(qry)
+
     if cache.get("alsintan") is not None:
             print("Key exists")
              # print(cache.get("name"))
@@ -671,28 +769,7 @@ def alsintan(request):
     else:
 
         with connections['default'].cursor() as cursor:
-            cursor.execute("""
-                        select v.vehicle_id,
-                        v.vehicle_year ,
-                        v.vin ,
-                        v.engine_number ,
-                        v.vehicle_name ,
-                        v.vehicle_merk ,
-                        v.vehicle_type ,
-                        v.recipient_party ,
-                        v.recipient_group ,
-                        v.recipient_name ,
-                        v.phone_number ,
-                        v.recipient_address ,
-                        v.province ,
-                        v.regency ,
-                        v.subdistrict ,
-                        v.ward ,
-                        v.engine_hours ,
-                        v.distance_km ,
-                        v.latitude_longitude 
-                        from vehicles v 
-            """)
+            cursor.execute(qry)
 
             rows = cursor.fetchall()
             
