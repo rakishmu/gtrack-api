@@ -507,6 +507,135 @@ def regencycount(request):
     return JsonResponse(payload, safe=False)
 
 
+@api_view(['GET'])
+def subdistriccount(request):
+
+    year = request.GET.get('year', '').strip()
+    province = request.GET.get('province', '').strip()
+    regency = request.GET.get('regency', '').strip()
+    subdistrict = request.GET.get('subdistrict', '').strip()
+    ward = request.GET.get('ward', '').strip()
+
+    conditions = []
+    params = []
+
+    if year:
+        conditions.append("v.vehicle_year = %s")
+        params.append(year)
+
+    if province:
+        conditions.append("v.province ILIKE %s")
+        params.append(f"%{province}%")
+
+    if regency:
+        conditions.append("v.regency ILIKE %s")
+        params.append(f"%{regency}%")
+
+    if subdistrict:
+        conditions.append("v.subdistrict ILIKE %s")
+        params.append(f"%{subdistrict}%")
+
+    if ward:
+        conditions.append("v.ward ILIKE %s")
+        params.append(f"%{ward}%")
+
+    qry = """
+    SELECT
+        v.subdistrict,
+        COUNT(v.vehicle_id)
+    FROM vehicles v
+    """
+
+    if conditions:
+        qry += " WHERE " + " AND ".join(conditions)
+
+    qry += """
+    GROUP BY v.subdistrict
+    ORDER BY COUNT(v.vehicle_id) DESC
+    """
+
+    print(qry)
+    print(params)
+
+    with connections['default'].cursor() as cursor:
+        cursor.execute(qry, params)
+        rows = cursor.fetchall()
+
+    payload = []
+
+    for row in rows:
+        payload.append({
+            "regency": (row[0] or "").upper(),
+            "count": row[1]
+        })
+
+    return JsonResponse(payload, safe=False)
+
+@api_view(['GET'])
+def wardcount(request):
+
+    year = request.GET.get('year', '').strip()
+    province = request.GET.get('province', '').strip()
+    regency = request.GET.get('regency', '').strip()
+    subdistrict = request.GET.get('subdistrict', '').strip()
+    ward = request.GET.get('ward', '').strip()
+
+    conditions = []
+    params = []
+
+    if year:
+        conditions.append("v.vehicle_year = %s")
+        params.append(year)
+
+    if province:
+        conditions.append("v.province ILIKE %s")
+        params.append(f"%{province}%")
+
+    if regency:
+        conditions.append("v.regency ILIKE %s")
+        params.append(f"%{regency}%")
+
+    if subdistrict:
+        conditions.append("v.subdistrict ILIKE %s")
+        params.append(f"%{subdistrict}%")
+
+    if ward:
+        conditions.append("v.ward ILIKE %s")
+        params.append(f"%{ward}%")
+
+    qry = """
+    SELECT
+        v.ward,
+        COUNT(v.vehicle_id)
+    FROM vehicles v
+    """
+
+    if conditions:
+        qry += " WHERE " + " AND ".join(conditions)
+
+    qry += """
+    GROUP BY v.ward
+    ORDER BY COUNT(v.vehicle_id) DESC
+    """
+
+    print(qry)
+    print(params)
+
+    with connections['default'].cursor() as cursor:
+        cursor.execute(qry, params)
+        rows = cursor.fetchall()
+
+    payload = []
+
+    for row in rows:
+        payload.append({
+            "regency": (row[0] or "").upper(),
+            "count": row[1]
+        })
+
+    return JsonResponse(payload, safe=False)
+
+
 
 def provincecount(request):
 
