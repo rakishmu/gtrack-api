@@ -4,8 +4,10 @@ from django.http import JsonResponse
 from django.db import connections
 from django.views.decorators.csrf import csrf_exempt
 from django.core.cache import cache
+from rest_framework.decorators import api_view
 
 import json
+
 
 
 
@@ -36,6 +38,7 @@ def longlatExtractor(longlat):
 
 
 
+@api_view(['GET'])
 def testdrive(request,refas):
     
     bergerak = 0
@@ -146,7 +149,7 @@ def testdrive(request,refas):
                         attr_dict = json.loads(attributes_raw) 
                         
                         # Ambil properti 'event' dan 'motion' di dalamnya
-                        # event_name = attr_dict.get("event", "unknown")
+                        event_name = attr_dict.get("event", "unknown")
                         motion_status = attr_dict.get("motion", False)
                         ignation = attr_dict.get("ignition", False)
 
@@ -226,6 +229,166 @@ def testdrive(request,refas):
      }, safe=False)
 
 
+def build_filter_clause(request):
+    clauses = []
+    params = []
+    
+    # Mapping request query parameters to SQL columns
+    filter_mappings = {
+        'year': 'v.vehicle_year',
+        'province': 'v.province',
+        'regency': 'v.regency',
+        'subdistrict': 'v.subdistrict',
+        'ward': 'v.ward'
+    }
+    
+    for param_name, sql_col in filter_mappings.items():
+        vals = request.GET.getlist(param_name)
+        vals = [v.strip() for v in vals if v.strip()]
+        if vals:
+            if len(vals) == 1:
+                clauses.append(f"{sql_col} ILIKE %s")
+                params.append(vals[0])
+            else:
+                lower_placeholders = ", ".join(["LOWER(%s)"] * len(vals))
+                clauses.append(f"LOWER({sql_col}) IN ({lower_placeholders})")
+                params.extend(vals)
+                
+    return clauses, params
+
+
+@api_view(['GET'])
+def testdrive_detail(request, refas, status):
+    # Normalize status parameter
+    status_lower = status.lower().strip()
+    target_status = status_lower
+    if status_lower == "not_connected":
+        target_status = "not_conected"
+    elif status_lower == "not_active":
+        target_status = "not_actived"
+    elif status_lower == "never_active":
+        target_status = "never_conected"
+
+    # 1. AMBIL DAFTAR IMEI & METADATA DARI DATABASE UTAMA (VEHICLES)
+    vehicle_metadata = {}
+    clauses, filter_params = build_filter_clause(request)
+    
+    sql = """
+        SELECT v.imei, v.vehicle_name, v.vehicle_merk, v.plate_number, 
+               v.recipient_name, v.province, v.regency, v.category_group_name
+        FROM vehicles v 
+        WHERE v.imei != '' 
+    """
+    params = []
+    if refas != "semua":
+        sql += " AND v.category_group_name != '' AND v.category_group_name ilike %s"
+        params.append(refas)
+    else:
+        sql += " AND v.category_group_name != ''"
+        
+    for clause in clauses:
+        sql += f" AND {clause}"
+    params.extend(filter_params)
+
+    with connections['default'].cursor() as cursor:
+        cursor.execute(sql, params)
+        rows = cursor.fetchall()
+        
+        for row in rows:
+            if row[0]:
+                imei = str(row[0]).strip()
+                vehicle_metadata[imei] = {
+                    "vehicle_name": row[1] if row[1] else "",
+                    "vehicle_merk": row[2] if row[2] else "",
+                    "plate_number": row[3] if row[3] else "",
+                    "recipient_name": row[4] if row[4] else "",
+                    "province": row[5] if row[5] else "",
+                    "regency": row[6] if row[6] else "",
+                    "category_group_name": row[7] if row[7] else ""
+                }
+    
+    imei_list = list(vehicle_metadata.keys())
+    payload = []
+
+    # 2. AMBIL DATA DARI DATABASE KEDUA (TRACCAR) MENGGUNAKAN KLAUSA "IN"
+    if imei_list:
+        placeholders = ", ".join(["%s"] * len(imei_list))
+        with connections['second'].cursor() as cursor:
+            cursor.execute(f"""
+                SELECT 
+                    td.uniqueid,
+                    td.positionid,
+                    tp.id,
+                    tp.speed,
+                    tp.servertime,
+                    tp.devicetime,
+                    td.disabled,
+                    td.status,
+                    tp.attributes
+                FROM tc_devices td
+                INNER JOIN tc_positions tp ON td.positionid = tp.id
+                WHERE td.uniqueid IN ({placeholders});
+            """, imei_list)
+
+            traccar_rows = cursor.fetchall()
+
+            for row in traccar_rows:
+                imei = row[0].strip() if row[0] else ""
+                speed = row[3]
+                status_val = row[7].strip() if row[7] else "unknown"
+                disable = row[6]
+                attributes_raw = row[8]
+                motion_status = False
+                ignation = False
+
+                if attributes_raw:
+                    try:
+                        attr_dict = json.loads(attributes_raw) 
+                        motion_status = attr_dict.get("motion", False)
+                        ignation = attr_dict.get("ignition", False)
+                    except Exception as e:
+                        pass
+                
+                # Classify status matching testdrive classification logic
+                item_status = "never_conected"
+                if disable == False and status_val == "online" and ignation == True and motion_status == True:
+                    item_status = "bergerak"
+                elif ignation == True and motion_status == False:
+                    item_status = "diam"
+                elif disable == False and status_val == "online" and ignation == False:
+                    item_status = "berhenti"
+                elif disable == False and status_val == "unknown":
+                    item_status = "not_conected"
+                elif disable == True:
+                    item_status = "not_actived"
+
+                if item_status == target_status:
+                    meta = vehicle_metadata.get(imei, {})
+                    combined = {
+                        "imei": imei,
+                        "vehicle_name": meta.get("vehicle_name", ""),
+                        "vehicle_merk": meta.get("vehicle_merk", ""),
+                        "plate_number": meta.get("plate_number", ""),
+                        "recipient_name": meta.get("recipient_name", ""),
+                        "province": meta.get("province", ""),
+                        "regency": meta.get("regency", ""),
+                        "category_group_name": meta.get("category_group_name", ""),
+                        "td_postid": row[1],
+                        "tp_id": row[2],
+                        "tp_speed": row[3],
+                        "tp_servertime": row[4],
+                        "tp_devicetime": row[5],  
+                        "td_disabled": row[6],
+                        "td_status": status_val,
+                        "ignition": ignation,
+                        "motion": motion_status
+                    }
+                    payload.append(combined)
+
+    return JsonResponse(payload, safe=False)
+
+
+@api_view(['GET'])
 def totalashintant(request):
 
 
@@ -279,6 +442,7 @@ def totalashintant(request):
 
     return JsonResponse(payload, safe=False)
 
+@api_view(['GET'])
 def regencycount(request):
 
     year = request.GET.get('year', '').strip()
@@ -341,6 +505,7 @@ def regencycount(request):
         })
 
     return JsonResponse(payload, safe=False)
+
 
 
 def provincecount(request):
@@ -408,6 +573,8 @@ def provincecount(request):
     return JsonResponse(payload, safe=False)
 
 
+
+@api_view(['GET'])
 def recipmentcount(request):
 
     with connections['default'].cursor() as cursor:
@@ -430,6 +597,7 @@ select v.category_group_name  , count(v.vehicle_id ) from vehicles v group by v.
 
 
 
+@api_view(['GET'])
 def jenisalsintan(request):
 
     year = request.GET.get('year', '').strip()
@@ -493,6 +661,7 @@ def jenisalsintan(request):
 
     return JsonResponse(payload, safe=False)
 
+@api_view(['GET'])
 
 def recipientgrouphourvskm(request):
 
@@ -573,8 +742,10 @@ def recipientgrouphourvskm(request):
         })
 
     return JsonResponse(payload, safe=False)
+    
 
  
+@api_view(['GET'])
 def provhourvskm(request):
     year = request.GET.get('year', '').strip()
     province = request.GET.get('province', '').strip()
@@ -654,6 +825,7 @@ def provhourvskm(request):
 
     return JsonResponse(payload, safe=False)
 
+@api_view(['GET'])
 def kabupatenhourvskm(request):
 
 
@@ -737,6 +909,7 @@ def kabupatenhourvskm(request):
     return JsonResponse(payload, safe=False)
     
 
+@api_view(['GET'])
 def purjunal(request):
 
     if cache.get("purjurnal") is not None:
@@ -851,6 +1024,7 @@ def purjunal(request,year=None,provience=None):
      
 
 
+@api_view(['GET'])
 def selectdistribution(request, gn):
 
     year = request.GET.get('year', '').strip()
@@ -921,6 +1095,7 @@ def selectdistribution(request, gn):
 
 
 
+@api_view(['GET'])
 def distribution(request):
 
 
@@ -995,6 +1170,7 @@ def distribution(request):
 
 
 
+@api_view(['GET'])
 def services(request):
      
 
@@ -1048,6 +1224,7 @@ def services(request):
 
 
 
+@api_view(['GET'])
 def geofence(request):
 
 
@@ -1106,6 +1283,7 @@ def geofence(request):
 )
 
 
+@api_view(['GET'])
 def alsintan(request):
 
     year = request.GET.get('year', '').strip()
@@ -1277,3 +1455,76 @@ def alsintan(request):
 #     }
 
 # )
+
+
+@api_view(['GET'])
+def average_engine_hours(request, category):
+    category_lower = category.lower().strip()
+    clauses, filter_params = build_filter_clause(request)
+    
+    sql = r"""
+        SELECT AVG(
+            CASE
+                WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
+                THEN v.engine_hours::NUMERIC
+                ELSE NULL
+            END
+        ) AS avg_hours
+        FROM vehicles v
+        WHERE 1=1
+    """
+    params = []
+    if category_lower != "alsintan":
+        sql += " AND v.category_group_name ILIKE %s"
+        params.append(category_lower)
+        
+    for clause in clauses:
+        sql += f" AND {clause}"
+    params.extend(filter_params)
+    
+    with connections['default'].cursor() as cursor:
+        cursor.execute(sql, params)
+        row = cursor.fetchone()
+        avg_val = float(row[0]) if row[0] is not None else 0.0
+        
+    return JsonResponse({
+        "category": category,
+        "average_engine_hours": avg_val
+    })
+
+
+@api_view(['GET'])
+def average_distance_km(request, category):
+    category_lower = category.lower().strip()
+    clauses, filter_params = build_filter_clause(request)
+    
+    sql = r"""
+        SELECT AVG(
+            CASE
+                WHEN v.distance_km ~ '^[0-9]+(\.[0-9]+)?$'
+                THEN v.distance_km::NUMERIC
+                ELSE NULL
+            END
+        ) AS avg_dist
+        FROM vehicles v
+        WHERE 1=1
+    """
+    params = []
+    if category_lower != "alsintan":
+        sql += " AND v.category_group_name ILIKE %s"
+        params.append(category_lower)
+        
+    for clause in clauses:
+        sql += f" AND {clause}"
+    params.extend(filter_params)
+    
+    with connections['default'].cursor() as cursor:
+        cursor.execute(sql, params)
+        row = cursor.fetchone()
+        avg_val = float(row[0]) if row[0] is not None else 0.0
+        
+    return JsonResponse({
+        "category": category,
+        "average_distance_km": avg_val
+    })
+
