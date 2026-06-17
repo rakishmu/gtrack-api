@@ -20,6 +20,7 @@ urlpatterns = [
     path('totalashintant', views.totalashintant, name='totalashintant'),
     path('testdrive', views.testdrive, name='testdrive'),
     path('provhourvskm', views.provhourvskm, name='provhourvskm'),
+    
 
 
 
