@@ -48,24 +48,57 @@ def testdrive(request,refas):
 
     # 1. AMBIL DAFTAR IMEI DARI DATABASE UTAMA (VEHICLES)
     imei_list = []
-    with connections['default'].cursor() as cursor:
 
-        if refas =="semua":
-            cursor.execute("""
-                SELECT v.imei 
-                FROM vehicles v 
-                WHERE v.imei != '' 
-                AND v.category_group_name != '' 
-            """)
-        else:
-             
-            cursor.execute("""
-                SELECT v.imei 
-                FROM vehicles v 
-                WHERE v.imei != '' 
-                AND v.category_group_name != '' 
-                AND v.category_group_name ilike %s;
-            """,[refas])
+
+
+    year = request.GET.get('year', '').strip()
+    province = request.GET.get('province', '').strip()
+    regency = request.GET.get('regency', '').strip()
+    subdistrict = request.GET.get('subdistrict', '').strip()
+    ward = request.GET.get('ward', '').strip()
+
+    conditions = [
+        "v.imei != ''",
+        "v.category_group_name != ''"
+    ]
+
+    params = []
+
+    # refas filter
+    if refas and refas.lower() != "semua":
+        conditions.append("v.category_group_name ILIKE %s")
+        params.append(f"%{refas}%")
+
+    # location filters
+    if year:
+        conditions.append("v.vehicle_year = %s")
+        params.append(year)
+
+    if province:
+        conditions.append("v.province ILIKE %s")
+        params.append(f"%{province}%")
+
+    if regency:
+        conditions.append("v.regency ILIKE %s")
+        params.append(f"%{regency}%")
+
+    if subdistrict:
+        conditions.append("v.subdistrict ILIKE %s")
+        params.append(f"%{subdistrict}%")
+
+    if ward:
+        conditions.append("v.ward ILIKE %s")
+        params.append(f"%{ward}%")
+
+    qry = """
+    SELECT v.imei
+    FROM vehicles v
+    """
+
+
+
+    with connections['default'].cursor() as cursor:
+        cursor.execute(qry, params)
         rows = cursor.fetchall()
         
         # Bersihkan string imei langsung saat dimasukkan ke list
@@ -195,62 +228,184 @@ def testdrive(request,refas):
 
 def totalashintant(request):
 
+
+    year = request.GET.get('year', '').strip()
+    province = request.GET.get('province', '').strip()
+    regency = request.GET.get('regency', '').strip()
+    subdistrict = request.GET.get('subdistrict', '').strip()
+    ward = request.GET.get('ward', '').strip()
+
+    conditions = []
+    params = []
+
+    if year:
+        conditions.append("v.vehicle_year = %s")
+        params.append(year)
+
+    if province:
+        conditions.append("v.province ILIKE %s")
+        params.append(f"%{province}%")
+
+    if regency:
+        conditions.append("v.regency ILIKE %s")
+        params.append(f"%{regency}%")
+
+    if subdistrict:
+        conditions.append("v.subdistrict ILIKE %s")
+        params.append(f"%{subdistrict}%")
+
+    if ward:
+        conditions.append("v.ward ILIKE %s")
+        params.append(f"%{ward}%")
+
+    qry = """
+    SELECT COUNT(v.vehicle_id)
+    FROM vehicles v
+    """
+
+    if conditions:
+        qry += " WHERE " + " AND ".join(conditions)
+
+    print(qry)
+    print(params)
+
     with connections['default'].cursor() as cursor:
-            cursor.execute("""
-            select  count(v.vehicle_id ) from vehicles v  ;
-            """)
+        cursor.execute(qry, params)
+        row = cursor.fetchone()
 
-            rows = cursor.fetchall()
-            
-            payload = []
+    payload = [{
+        "count": row[0] if row else 0
+    }]
 
-            for row in rows:    
-                data={}
-                data["count"] = row[0]
-                
-                payload.append(data)
     return JsonResponse(payload, safe=False)
 
 def regencycount(request):
 
+    year = request.GET.get('year', '').strip()
+    province = request.GET.get('province', '').strip()
+    regency = request.GET.get('regency', '').strip()
+    subdistrict = request.GET.get('subdistrict', '').strip()
+    ward = request.GET.get('ward', '').strip()
+
+    conditions = []
+    params = []
+
+    if year:
+        conditions.append("v.vehicle_year = %s")
+        params.append(year)
+
+    if province:
+        conditions.append("v.province ILIKE %s")
+        params.append(f"%{province}%")
+
+    if regency:
+        conditions.append("v.regency ILIKE %s")
+        params.append(f"%{regency}%")
+
+    if subdistrict:
+        conditions.append("v.subdistrict ILIKE %s")
+        params.append(f"%{subdistrict}%")
+
+    if ward:
+        conditions.append("v.ward ILIKE %s")
+        params.append(f"%{ward}%")
+
+    qry = """
+    SELECT
+        v.regency,
+        COUNT(v.vehicle_id)
+    FROM vehicles v
+    """
+
+    if conditions:
+        qry += " WHERE " + " AND ".join(conditions)
+
+    qry += """
+    GROUP BY v.regency
+    ORDER BY COUNT(v.vehicle_id) DESC
+    """
+
+    print(qry)
+    print(params)
+
     with connections['default'].cursor() as cursor:
-            cursor.execute("""
-            select v.regency   , count(v.vehicle_id ) from vehicles v group by v.regency ;
-            """)
+        cursor.execute(qry, params)
+        rows = cursor.fetchall()
 
-            rows = cursor.fetchall()
-            
-            payload = []
+    payload = []
 
-            for row in rows:    
-                data={}
-                data["regency"] = row[0].upper()
-                data["count"] = row[1]
-                
-                payload.append(data)
+    for row in rows:
+        payload.append({
+            "regency": (row[0] or "").upper(),
+            "count": row[1]
+        })
+
     return JsonResponse(payload, safe=False)
-
 
 
 def provincecount(request):
 
+
+    year = request.GET.get('year', '').strip()
+    province = request.GET.get('province', '').strip()
+    regency = request.GET.get('regency', '').strip()
+    subdistrict = request.GET.get('subdistrict', '').strip()
+    ward = request.GET.get('ward', '').strip()
+
+    conditions = []
+    params = []
+
+    if year:
+        conditions.append("v.vehicle_year = %s")
+        params.append(year)
+
+    if province:
+        conditions.append("v.province ILIKE %s")
+        params.append(f"%{province}%")
+
+    if regency:
+        conditions.append("v.regency ILIKE %s")
+        params.append(f"%{regency}%")
+
+    if subdistrict:
+        conditions.append("v.subdistrict ILIKE %s")
+        params.append(f"%{subdistrict}%")
+
+    if ward:
+        conditions.append("v.ward ILIKE %s")
+        params.append(f"%{ward}%")
+
+    qry = """
+    SELECT
+        v.province,
+        COUNT(v.vehicle_id)
+    FROM vehicles v
+    """
+
+    if conditions:
+        qry += " WHERE " + " AND ".join(conditions)
+
+    qry += """
+    GROUP BY v.province
+    ORDER BY COUNT(v.vehicle_id) DESC
+    """
+
+    print(qry)
+    print(params)
+
     with connections['default'].cursor() as cursor:
-            cursor.execute("""
-select v.province   , count(v.vehicle_id ) from vehicles v group by v.province ;
-            """)
+        cursor.execute(qry, params)
+        rows = cursor.fetchall()
 
-            rows = cursor.fetchall()
-            
-            payload = []
+    payload = []
 
-            for row in rows:    
-                data={}
-                data["province"] = row[0].upper()
-                data["count"] = row[1]
-                
-                payload.append(data)
+    for row in rows:
+        payload.append({
+            "province": (row[0] or "").upper(),
+            "count": row[1]
+        })
+
     return JsonResponse(payload, safe=False)
-
 
 
 def recipmentcount(request):
@@ -277,140 +432,308 @@ select v.category_group_name  , count(v.vehicle_id ) from vehicles v group by v.
 
 def jenisalsintan(request):
 
+    year = request.GET.get('year', '').strip()
+    province = request.GET.get('province', '').strip()
+    regency = request.GET.get('regency', '').strip()
+    subdistrict = request.GET.get('subdistrict', '').strip()
+    ward = request.GET.get('ward', '').strip()
+
+    conditions = []
+    params = []
+
+    if year:
+        conditions.append("v.vehicle_year = %s")
+        params.append(year)
+
+    if province:
+        conditions.append("v.province ILIKE %s")
+        params.append(f"%{province}%")
+
+    if regency:
+        conditions.append("v.regency ILIKE %s")
+        params.append(f"%{regency}%")
+
+    if subdistrict:
+        conditions.append("v.subdistrict ILIKE %s")
+        params.append(f"%{subdistrict}%")
+
+    if ward:
+        conditions.append("v.ward ILIKE %s")
+        params.append(f"%{ward}%")
+
+    qry = """
+    SELECT
+        v.vehicle_name,
+        COUNT(v.vehicle_id)
+    FROM vehicles v
+    """
+
+    if conditions:
+        qry += " WHERE " + " AND ".join(conditions)
+
+    qry += """
+    GROUP BY v.vehicle_name
+    ORDER BY COUNT(v.vehicle_id) DESC
+    """
+
+    print(qry)
+    print(params)
+
     with connections['default'].cursor() as cursor:
-            cursor.execute("""
-            select v.vehicle_name , count(v.vehicle_id ) from vehicles v group by v.vehicle_name 
+        cursor.execute(qry, params)
+        rows = cursor.fetchall()
 
-            """)
+    payload = []
 
-            rows = cursor.fetchall()
-            
-            payload = []
+    for row in rows:
+        payload.append({
+            "vehicle_name": (row[0] or "").upper(),
+            "count": row[1]
+        })
 
-            for row in rows:    
-                data={}
-                data["vehivle_name"] = row[0].upper()
-                data["count"] = row[1]
-                
-                payload.append(data)
     return JsonResponse(payload, safe=False)
+
 
 def recipientgrouphourvskm(request):
 
+    year = request.GET.get('year', '').strip()
+    province = request.GET.get('province', '').strip()
+    regency = request.GET.get('regency', '').strip()
+    subdistrict = request.GET.get('subdistrict', '').strip()
+    ward = request.GET.get('ward', '').strip()
+
+    conditions = [
+        "v.category_group_name IS NOT NULL",
+        "v.category_group_name <> ''"
+    ]
+
+    params = []
+
+    if year:
+        conditions.append("v.vehicle_year = %s")
+        params.append(year)
+
+    if province:
+        conditions.append("v.province ILIKE %s")
+        params.append(f"%{province}%")
+
+    if regency:
+        conditions.append("v.regency ILIKE %s")
+        params.append(f"%{regency}%")
+
+    if subdistrict:
+        conditions.append("v.subdistrict ILIKE %s")
+        params.append(f"%{subdistrict}%")
+
+    if ward:
+        conditions.append("v.ward ILIKE %s")
+        params.append(f"%{ward}%")
+
+    qry = """
+    SELECT
+        v.category_group_name,
+        SUM(
+            CASE
+                WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
+                THEN v.engine_hours::NUMERIC
+                ELSE 0
+            END
+        ) AS sum_engine_hour,
+        SUM(
+            CASE
+                WHEN v.distance_km ~ '^[0-9]+(\.[0-9]+)?$'
+                THEN v.distance_km::NUMERIC
+                ELSE 0
+            END
+        ) AS sum_distance
+    FROM vehicles v
+    """
+
+    qry += " WHERE " + " AND ".join(conditions)
+
+    qry += """
+    GROUP BY v.category_group_name
+    ORDER BY v.category_group_name
+    """
+
+    print(qry)
+    print(params)
+
     with connections['default'].cursor() as cursor:
-            cursor.execute("""
+        cursor.execute(qry, params)
+        rows = cursor.fetchall()
 
-                SELECT
-                v.category_group_name,
-                SUM(
-                    CASE
-                        WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
-                        THEN v.engine_hours::NUMERIC
-                        ELSE 0
-                    END
-                ) AS sum_engine_hour,
-                SUM(
-                    CASE
-                        WHEN v.distance_km ~ '^[0-9]+(\.[0-9]+)?$'
-                        THEN v.distance_km::NUMERIC
-                        ELSE 0
-                    END
-                ) AS sum_distance
-            FROM vehicles v
-            WHERE v.category_group_name IS NOT NULL
-            AND v.category_group_name <> ''
-            GROUP BY v.category_group_name;
-            """)
+    payload = []
 
-            rows = cursor.fetchall()
-            
-            payload = []
+    for row in rows:
+        payload.append({
+            "recipient_group": (row[0] or "").upper(),
+            "sum_engine_hours": float(row[1] or 0),
+            "sum_distance_km": float(row[2] or 0)
+        })
 
-            for row in rows:    
-                data={}
-                data["recipient_group"] = row[0].upper()
-                data["sum_engine_hours"] = row[1]
-                data["sum_distance_km"] = row[2]
-                payload.append(data)
     return JsonResponse(payload, safe=False)
-    
 
  
 def provhourvskm(request):
+    year = request.GET.get('year', '').strip()
+    province = request.GET.get('province', '').strip()
+    regency = request.GET.get('regency', '').strip()
+    subdistrict = request.GET.get('subdistrict', '').strip()
+    ward = request.GET.get('ward', '').strip()
+
+    conditions = [
+        "v.province IS NOT NULL",
+        "v.province <> ''"
+    ]
+
+    params = []
+
+    if year:
+        conditions.append("v.vehicle_year = %s")
+        params.append(year)
+
+    if province:
+        conditions.append("v.province ILIKE %s")
+        params.append(f"%{province}%")
+
+    if regency:
+        conditions.append("v.regency ILIKE %s")
+        params.append(f"%{regency}%")
+
+    if subdistrict:
+        conditions.append("v.subdistrict ILIKE %s")
+        params.append(f"%{subdistrict}%")
+
+    if ward:
+        conditions.append("v.ward ILIKE %s")
+        params.append(f"%{ward}%")
+
+    qry = """
+    SELECT
+        v.province,
+        SUM(
+            CASE
+                WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
+                THEN v.engine_hours::NUMERIC
+                ELSE 0
+            END
+        ) AS sum_engine_hour,
+        SUM(
+            CASE
+                WHEN v.distance_km ~ '^[0-9]+(\.[0-9]+)?$'
+                THEN v.distance_km::NUMERIC
+                ELSE 0
+            END
+        ) AS sum_distance
+    FROM vehicles v
+    """
+
+    qry += " WHERE " + " AND ".join(conditions)
+
+    qry += """
+    GROUP BY v.province
+    ORDER BY v.province
+    """
+
+    print(qry)
+    print(params)
 
     with connections['default'].cursor() as cursor:
-            cursor.execute("""
-            SELECT
-                v.province,
-                SUM(
-                    CASE
-                        WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
-                        THEN v.engine_hours::NUMERIC
-                        ELSE 0
-                    END
-                ) AS sum_engine_hour,
-                SUM(
-                    CASE
-                        WHEN v.distance_km ~ '^[0-9]+(\.[0-9]+)?$'
-                        THEN v.distance_km::NUMERIC
-                        ELSE 0
-                    END
-                ) AS sum_distance
-            FROM vehicles v
-            WHERE v.province IS NOT NULL
-            AND v.province <> ''
-            GROUP BY v.province;
-            """)
+        cursor.execute(qry, params)
+        rows = cursor.fetchall()
 
-            rows = cursor.fetchall()
-            
-            payload = []
+    payload = []
 
-            for row in rows:    
-                data={}
-                data["regency"] = row[0].upper()
-                data["sum_engine_hours"] = row[1]
-                data["sum_distance_km"] = row[2]
-                payload.append(data)
+    for row in rows:
+        payload.append({
+            "province": (row[0] or "").upper(),
+            "sum_engine_hours": float(row[1] or 0),
+            "sum_distance_km": float(row[2] or 0)
+        })
+
     return JsonResponse(payload, safe=False)
 
 def kabupatenhourvskm(request):
 
+
+    year = request.GET.get('year', '').strip()
+    province = request.GET.get('province', '').strip()
+    regency = request.GET.get('regency', '').strip()
+    subdistrict = request.GET.get('subdistrict', '').strip()
+    ward = request.GET.get('ward', '').strip()
+
+    conditions = [
+        "v.regency IS NOT NULL",
+        "v.regency <> ''",
+        "v.regency != 'Brigade Dinas'"
+    ]
+
+    params = []
+
+    if year:
+        conditions.append("v.vehicle_year = %s")
+        params.append(year)
+
+    if province:
+        conditions.append("v.province ILIKE %s")
+        params.append(f"%{province}%")
+
+    if regency:
+        conditions.append("v.regency ILIKE %s")
+        params.append(f"%{regency}%")
+
+    if subdistrict:
+        conditions.append("v.subdistrict ILIKE %s")
+        params.append(f"%{subdistrict}%")
+
+    if ward:
+        conditions.append("v.ward ILIKE %s")
+        params.append(f"%{ward}%")
+
+    qry = """
+    SELECT
+        v.regency,
+        SUM(
+            CASE
+                WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
+                THEN v.engine_hours::NUMERIC
+                ELSE 0
+            END
+        ) AS sum_engine_hour,
+        SUM(
+            CASE
+                WHEN v.distance_km ~ '^[0-9]+(\.[0-9]+)?$'
+                THEN v.distance_km::NUMERIC
+                ELSE 0
+            END
+        ) AS sum_distance
+    FROM vehicles v
+    """
+
+    qry += " WHERE " + " AND ".join(conditions)
+
+    qry += """
+    GROUP BY v.regency
+    ORDER BY v.regency
+    """
+
+    print(qry)
+    print(params)
+
     with connections['default'].cursor() as cursor:
-            cursor.execute("""
-            SELECT
-                v.regency,
-                SUM(
-                    CASE
-                        WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
-                        THEN v.engine_hours::NUMERIC
-                        ELSE 0
-                    END
-                ) AS sum_engine_hour,
-                SUM(
-                    CASE
-                        WHEN v.distance_km ~ '^[0-9]+(\.[0-9]+)?$'
-                        THEN v.distance_km::NUMERIC
-                        ELSE 0
-                    END
-                ) AS sum_distance
-            FROM vehicles v
-            WHERE v.regency IS NOT NULL
-            AND v.regency <> ''
-            AND v.regency != 'Brigade Dinas'
-            GROUP BY v.regency;
-            """)
+        cursor.execute(qry, params)
+        rows = cursor.fetchall()
 
-            rows = cursor.fetchall()
-            
-            payload = []
+    payload = []
 
-            for row in rows:    
-                data={}
-                data["regency"] = row[0].upper()
-                data["sum_engine_hours"] = row[1]
-                data["sum_distance_km"] = row[2]
-                payload.append(data)
+    for row in rows:
+        payload.append({
+            "regency": row[0].upper(),
+            "sum_engine_hours": float(row[1] or 0),
+            "sum_distance_km": float(row[2] or 0)
+        })
+
     return JsonResponse(payload, safe=False)
     
 
@@ -529,52 +852,133 @@ def purjunal(request,year=None,provience=None):
 
 
 def selectdistribution(request, gn):
-     
-     with connections['default'].cursor() as cursor:
-                cursor.execute("""
-                    SELECT 
-                        v.category_group_name as group_name,  
-                        COUNT(v.vehicle_id) AS total 
-                    FROM vehicles v
-                    WHERE v.category_group_name ILIKE %s
-                    GROUP BY v.category_group_name;
-                """,[gn])
-                rows = cursor.fetchall()
-                # FIX 2: Validasi jika data tidak ditemukan agar tidak IndexError
-                if rows:
-                    # rows[0] adalah baris pertama hasil query, misalnya: ('UPJA', 45)
-                    payload = {
-                        "group_name": rows[0][0],  # Baris ke-0, Kolom ke-0 (recipient_group)
-                        "total": rows[0][1]       # Baris ke-0, Kolom ke-1 (total)
-                    }
-                else:
-                    # Jika grup tidak ditemukan di database, return data kosong / default
-                    payload = {
-                        "group_name": gn,
-                        "total": 0
-                    }
 
-     return JsonResponse(payload, safe=False)
+    year = request.GET.get('year', '').strip()
+    province = request.GET.get('province', '').strip()
+    regency = request.GET.get('regency', '').strip()
+    subdistrict = request.GET.get('subdistrict', '').strip()
+    ward = request.GET.get('ward', '').strip()
 
+    qry = """
+    SELECT
+        v.category_group_name AS group_name,
+        COUNT(v.vehicle_id) AS total
+    FROM vehicles v
+    """
+
+    conditions = [
+        "v.category_group_name ILIKE %s"
+    ]
+
+    params = [gn]
+
+    if year:
+        conditions.append("v.vehicle_year = %s")
+        params.append(year)
+
+    if province:
+        conditions.append("v.province ILIKE %s")
+        params.append(f"%{province}%")
+
+    if regency:
+        conditions.append("v.regency ILIKE %s")
+        params.append(f"%{regency}%")
+
+    if subdistrict:
+        conditions.append("v.subdistrict ILIKE %s")
+        params.append(f"%{subdistrict}%")
+
+    if ward:
+        conditions.append("v.ward ILIKE %s")
+        params.append(f"%{ward}%")
+
+    qry += " WHERE " + " AND ".join(conditions)
+
+    qry += """
+    GROUP BY v.category_group_name
+    """
+
+    print(qry)
+    print(params)
+
+    with connections['default'].cursor() as cursor:
+        cursor.execute(qry, params)
+        rows = cursor.fetchall()
+
+    if rows:
+        payload = {
+            "group_name": rows[0][0],
+            "total": rows[0][1]
+        }
+    else:
+        payload = {
+            "group_name": gn,
+            "total": 0
+        }
+
+    return JsonResponse(payload, safe=False)
      
 
 
 
 def distribution(request):
-    if cache.get("distribution") is not None:
+
+
+
+
+
+
+    year = request.GET.get('year', '').strip()
+    province = request.GET.get('province', '').strip()
+    regency = request.GET.get('regency', '').strip()
+    subdistrict = request.GET.get('subdistrict', '').strip()
+    ward = request.GET.get('ward', '').strip()
+
+    conditions = []
+    params = []
+
+    if year:
+        conditions.append("v.vehicle_year = %s")
+        params.append(year)
+
+    if province:
+        conditions.append("v.province ILIKE %s")
+        params.append(f"%{province}%")
+
+    if regency:
+        conditions.append("v.regency ILIKE %s")
+        params.append(f"%{regency}%")
+
+    if subdistrict:
+        conditions.append("v.subdistrict ILIKE %s")
+        params.append(f"%{subdistrict}%")
+
+    if ward:
+        conditions.append("v.ward ILIKE %s")
+        params.append(f"%{ward}%")
+
+    qry = """
+    SELECT
+        COALESCE(v.recipient_group, 'Total') AS group_name,
+        COUNT(*) AS total
+    FROM vehicles v
+    """
+
+    if conditions:
+        qry += " WHERE " + " AND ".join(conditions)
+
+    qry += """
+    GROUP BY ROLLUP(v.recipient_group)
+    ORDER BY (v.recipient_group IS NULL) ASC, total DESC
+    """
+
+    if cache.get("distribution1") is not None:
             print("Key exists")
              # print(cache.get("name"))
             print("Using Caching")
             payload = cache.get("distribution")
     with connections['default'].cursor() as cursor:
-                cursor.execute("""
-                SELECT
-                COALESCE(v.recipient_group, 'Total') AS group_name,
-                COUNT(*) AS total
-                FROM vehicles v
-                GROUP BY ROLLUP(v.recipient_group)
-                ORDER BY (v.recipient_group IS NULL) ASC, total DESC;
-                """)
+                cursor.execute(qry,params)
 
                 rows = cursor.fetchall()
                 
@@ -743,25 +1147,25 @@ def alsintan(request):
 
     if province:
         conditions.append("v.province ILIKE %s")
-        params.append(province)
+        params.append(f"%{province}%")
 
     if regency:
         conditions.append("v.regency ILIKE %s")
-        params.append(regency)
+        params.append(f"%{regency}%")
 
     if subdistrict:
         conditions.append("v.subdistrict ILIKE %s")
-        params.append(subdistrict)
+        params.append(f"%{subdistrict}%")
 
     if ward:
         conditions.append("v.ward ILIKE %s")
-        params.append(ward)
+        params.append(f"%{ward}%")
 
     if conditions:
         qry += " WHERE " + " AND ".join(conditions)
-    # print(qry)
 
-    if cache.get("alsintan") is not None:
+
+    if cache.get("alsintan1") is not None:
             print("Key exists")
              # print(cache.get("name"))
             print("Using Caching")
@@ -769,7 +1173,7 @@ def alsintan(request):
     else:
 
         with connections['default'].cursor() as cursor:
-            cursor.execute(qry)
+            cursor.execute(qry, params)
 
             rows = cursor.fetchall()
             
@@ -815,7 +1219,7 @@ def alsintan(request):
                 data["lng"] = long
                 data["lastUpdated"] = None
                 payload.append(data)
-            cache.set("alsintan", payload, timeout=300)    
+            # cache.set("alsintan", payload, timeout=300)    
 
 
     return JsonResponse(payload, safe=False)
