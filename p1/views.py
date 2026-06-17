@@ -196,6 +196,34 @@ def testdrive(request,refas):
      }, safe=False)
 
 
+def build_filter_clause(request):
+    clauses = []
+    params = []
+    
+    # Mapping request query parameters to SQL columns
+    filter_mappings = {
+        'year': 'v.vehicle_year',
+        'province': 'v.province',
+        'regency': 'v.regency',
+        'subdistrict': 'v.subdistrict',
+        'ward': 'v.ward'
+    }
+    
+    for param_name, sql_col in filter_mappings.items():
+        vals = request.GET.getlist(param_name)
+        vals = [v.strip() for v in vals if v.strip()]
+        if vals:
+            if len(vals) == 1:
+                clauses.append(f"{sql_col} ILIKE %s")
+                params.append(vals[0])
+            else:
+                lower_placeholders = ", ".join(["LOWER(%s)"] * len(vals))
+                clauses.append(f"LOWER({sql_col}) IN ({lower_placeholders})")
+                params.extend(vals)
+                
+    return clauses, params
+
+
 @api_view(['GET'])
 def testdrive_detail(request, refas, status):
     # Normalize status parameter
@@ -210,24 +238,27 @@ def testdrive_detail(request, refas, status):
 
     # 1. AMBIL DAFTAR IMEI & METADATA DARI DATABASE UTAMA (VEHICLES)
     vehicle_metadata = {}
+    clauses, filter_params = build_filter_clause(request)
+    
+    sql = """
+        SELECT v.imei, v.vehicle_name, v.vehicle_merk, v.plate_number, 
+               v.recipient_name, v.province, v.regency, v.category_group_name
+        FROM vehicles v 
+        WHERE v.imei != '' 
+    """
+    params = []
+    if refas != "semua":
+        sql += " AND v.category_group_name != '' AND v.category_group_name ilike %s"
+        params.append(refas)
+    else:
+        sql += " AND v.category_group_name != ''"
+        
+    for clause in clauses:
+        sql += f" AND {clause}"
+    params.extend(filter_params)
+
     with connections['default'].cursor() as cursor:
-        if refas == "semua":
-            cursor.execute("""
-                SELECT v.imei, v.vehicle_name, v.vehicle_merk, v.plate_number, 
-                       v.recipient_name, v.province, v.regency, v.category_group_name
-                FROM vehicles v 
-                WHERE v.imei != '' 
-                AND v.category_group_name != '' 
-            """)
-        else:
-            cursor.execute("""
-                SELECT v.imei, v.vehicle_name, v.vehicle_merk, v.plate_number, 
-                       v.recipient_name, v.province, v.regency, v.category_group_name
-                FROM vehicles v 
-                WHERE v.imei != '' 
-                AND v.category_group_name != '' 
-                AND v.category_group_name ilike %s;
-            """, [refas])
+        cursor.execute(sql, params)
         rows = cursor.fetchall()
         
         for row in rows:
@@ -1023,31 +1054,30 @@ def alsintan(request):
 @api_view(['GET'])
 def average_engine_hours(request, category):
     category_lower = category.lower().strip()
-    with connections['default'].cursor() as cursor:
-        if category_lower == "alsintan":
-            cursor.execute(r"""
-                SELECT AVG(
-                    CASE
-                        WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
-                        THEN v.engine_hours::NUMERIC
-                        ELSE NULL
-                    END
-                ) AS avg_hours
-                FROM vehicles v
-            """)
-        else:
-            cursor.execute(r"""
-                SELECT AVG(
-                    CASE
-                        WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
-                        THEN v.engine_hours::NUMERIC
-                        ELSE NULL
-                    END
-                ) AS avg_hours
-                FROM vehicles v
-                WHERE v.category_group_name ILIKE %s
-            """, [category_lower])
+    clauses, filter_params = build_filter_clause(request)
+    
+    sql = r"""
+        SELECT AVG(
+            CASE
+                WHEN v.engine_hours ~ '^[0-9]+(\.[0-9]+)?$'
+                THEN v.engine_hours::NUMERIC
+                ELSE NULL
+            END
+        ) AS avg_hours
+        FROM vehicles v
+        WHERE 1=1
+    """
+    params = []
+    if category_lower != "alsintan":
+        sql += " AND v.category_group_name ILIKE %s"
+        params.append(category_lower)
         
+    for clause in clauses:
+        sql += f" AND {clause}"
+    params.extend(filter_params)
+    
+    with connections['default'].cursor() as cursor:
+        cursor.execute(sql, params)
         row = cursor.fetchone()
         avg_val = float(row[0]) if row[0] is not None else 0.0
         
@@ -1060,31 +1090,30 @@ def average_engine_hours(request, category):
 @api_view(['GET'])
 def average_distance_km(request, category):
     category_lower = category.lower().strip()
+    clauses, filter_params = build_filter_clause(request)
+    
+    sql = r"""
+        SELECT AVG(
+            CASE
+                WHEN v.distance_km ~ '^[0-9]+(\.[0-9]+)?$'
+                THEN v.distance_km::NUMERIC
+                ELSE NULL
+            END
+        ) AS avg_dist
+        FROM vehicles v
+        WHERE 1=1
+    """
+    params = []
+    if category_lower != "alsintan":
+        sql += " AND v.category_group_name ILIKE %s"
+        params.append(category_lower)
+        
+    for clause in clauses:
+        sql += f" AND {clause}"
+    params.extend(filter_params)
+    
     with connections['default'].cursor() as cursor:
-        if category_lower == "alsintan":
-            cursor.execute(r"""
-                SELECT AVG(
-                    CASE
-                        WHEN v.distance_km ~ '^[0-9]+(\.[0-9]+)?$'
-                        THEN v.distance_km::NUMERIC
-                        ELSE NULL
-                    END
-                ) AS avg_dist
-                FROM vehicles v
-            """)
-        else:
-            cursor.execute(r"""
-                SELECT AVG(
-                    CASE
-                        WHEN v.distance_km ~ '^[0-9]+(\.[0-9]+)?$'
-                        THEN v.distance_km::NUMERIC
-                        ELSE NULL
-                    END
-                ) AS avg_dist
-                FROM vehicles v
-                WHERE v.category_group_name ILIKE %s
-            """, [category_lower])
-            
+        cursor.execute(sql, params)
         row = cursor.fetchone()
         avg_val = float(row[0]) if row[0] is not None else 0.0
         
