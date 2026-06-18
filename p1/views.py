@@ -1663,3 +1663,67 @@ def average_distance_km(request, category):
         "average_distance_km": avg_val
     })
 
+
+@api_view(['GET'])
+def purna_jual_list(request):
+    clauses = []
+    params = []
+    
+    # Optional query filters
+    province = request.GET.get('province')
+    if province:
+        clauses.append("province ILIKE %s")
+        params.append(province)
+        
+    regency = request.GET.get('regency')
+    if regency:
+        clauses.append("regency ILIKE %s")
+        params.append(regency)
+        
+    brand = request.GET.get('brand')
+    if brand:
+        clauses.append("brand ILIKE %s")
+        params.append(brand)
+        
+    sql = """
+        SELECT purna_jual_id, brand, name, latitude_longitude, province, regency, address, phone_number
+        FROM purna_jual
+    """
+    
+    if clauses:
+        sql += " WHERE " + " AND ".join(clauses)
+        
+    payload = []
+    with connections['default'].cursor() as cursor:
+        cursor.execute(sql, params)
+        rows = cursor.fetchall()
+        
+        for row in rows:
+            data = {}
+            data["purna_jual_id"] = str(row[0])
+            data["brand"] = row[1] if row[1] else ""
+            data["name"] = row[2] if row[2] else ""
+            
+            # Extract lat/lng
+            lat, long = "", ""
+            if row[3]:
+                try:
+                    parts = row[3].split(",")
+                    if len(parts) == 2:
+                        lat = float(parts[0].strip())
+                        long = float(parts[1].strip())
+                except:
+                    pass
+            
+            data["lat"] = lat
+            data["lng"] = long
+            data["province"] = row[4] if row[4] else ""
+            data["regency"] = row[5] if row[5] else ""
+            data["address"] = row[6] if row[6] else ""
+            data["phone_number"] = row[7] if row[7] else ""
+            
+            payload.append(data)
+            
+    return JsonResponse(payload, safe=False)
+
+

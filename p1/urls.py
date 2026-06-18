@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('purnajuals', views.purjunal, name='purjunal'),
+    path('purna-jual', views.purna_jual_list, name='purna_jual_list'),
     # path('purnajuals/<str:year>', views.purjunal, name='purjunal'),
     path('services', views.services, name='services'),
     path('geofence', views.geofence, name='geofence'),
