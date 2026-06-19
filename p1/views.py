@@ -1454,6 +1454,19 @@ def alsintan(request):
     conditions = []
     params = []
 
+    # Parse and clean multiple jenis parameter (supports repeated keys and comma separation)
+    raw_jenis = request.GET.getlist('jenis') + request.GET.getlist('vehicle_name')
+    jenis_list = []
+    for item in raw_jenis:
+        for val in item.split(','):
+            if val.strip():
+                jenis_list.append(val.strip())
+
+    if jenis_list:
+        lower_placeholders = ", ".join(["LOWER(%s)"] * len(jenis_list))
+        conditions.append(f"LOWER(v.vehicle_name) IN ({lower_placeholders})")
+        params.extend(jenis_list)
+
     if year:
         conditions.append("v.vehicle_year = %s")
         params.append(year)
