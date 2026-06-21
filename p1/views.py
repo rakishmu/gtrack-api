@@ -5,10 +5,14 @@ from django.db import connections
 from django.views.decorators.csrf import csrf_exempt
 from django.core.cache import cache
 from rest_framework.decorators import api_view
-
+from .serializers import *
 import json
-
-
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from rest_framework.decorators import api_view
+from drf_spectacular.utils import (
+    extend_schema,
+    OpenApiParameter
+)
 
 
 
@@ -37,7 +41,49 @@ def longlatExtractor(longlat):
 # select v.regency    , count(v.vehicle_id ) from vehicles v group by v.regency ;
 
 
-
+@extend_schema(
+    summary="Monitoring Dashboard",
+    description="Get vehicle statistics from Traccar",
+    parameters=[
+        OpenApiParameter(
+            name='refas',
+            description='Category Group Name',
+            required=True,
+            type=str,
+            location=OpenApiParameter.PATH
+        ),
+        OpenApiParameter(
+            name='year',
+            description='Vehicle Year',
+            required=False,
+            type=str
+        ),
+        OpenApiParameter(
+            name='province',
+            description='Province',
+            required=False,
+            type=str
+        ),
+        OpenApiParameter(
+            name='regency',
+            description='Regency',
+            required=False,
+            type=str
+        ),
+        OpenApiParameter(
+            name='subdistrict',
+            description='Subdistrict',
+            required=False,
+            type=str
+        ),
+        OpenApiParameter(
+            name='ward',
+            description='Ward',
+            required=False,
+            type=str
+        ),
+    ]
+)
 @api_view(['GET'])
 def testdrive(request,refas):
 
@@ -393,7 +439,53 @@ def testdrive_detail(request, refas, status):
 
     return JsonResponse(payload, safe=False)
 
+@extend_schema(
+    summary="Total Alsintan Count",
+    description="""
+    Returns total count of vehicles (alsintan) based on optional filters.
 
+    Supports filtering by:
+    - year
+    - province
+    - regency
+    - subdistrict
+    - ward
+    """,
+    parameters=[
+        OpenApiParameter(
+            name="year",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Vehicle year"
+        ),
+        OpenApiParameter(
+            name="province",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Province filter"
+        ),
+        OpenApiParameter(
+            name="regency",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Regency filter"
+        ),
+        OpenApiParameter(
+            name="subdistrict",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Subdistrict filter"
+        ),
+        OpenApiParameter(
+            name="ward",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Ward filter"
+        ),
+    ],
+    responses=TotalAlsintanSerializer,
+    tags=["Alsintan"]
+)
 @api_view(['GET'])
 def totalashintant(request):
 
@@ -448,6 +540,55 @@ def totalashintant(request):
 
     return JsonResponse(payload, safe=False)
 
+
+
+@extend_schema(
+    summary="Regency Vehicle Count",
+    description="""
+    Returns total vehicles grouped by regency.
+
+    Supports filtering by:
+    - year
+    - province
+    - regency
+    - subdistrict
+    - ward
+    """,
+    parameters=[
+        OpenApiParameter(
+            name="year",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Vehicle year"
+        ),
+        OpenApiParameter(
+            name="province",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Province filter"
+        ),
+        OpenApiParameter(
+            name="regency",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Regency filter"
+        ),
+        OpenApiParameter(
+            name="subdistrict",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Subdistrict filter"
+        ),
+        OpenApiParameter(
+            name="ward",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Ward filter"
+        ),
+    ],
+    responses=RegencyCountSerializer(many=True),
+    tags=["Distribution"]
+)
 @api_view(['GET'])
 def regencycount(request):
 
@@ -512,7 +653,53 @@ def regencycount(request):
 
     return JsonResponse(payload, safe=False)
 
+@extend_schema(
+    summary="Subdistrict Vehicle Count",
+    description="""
+    Returns total vehicles grouped by subdistrict.
 
+    Supports filtering by:
+    - year
+    - province
+    - regency
+    - subdistrict
+    - ward
+    """,
+    parameters=[
+        OpenApiParameter(
+            name="year",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Vehicle year"
+        ),
+        OpenApiParameter(
+            name="province",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Province filter"
+        ),
+        OpenApiParameter(
+            name="regency",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Regency filter"
+        ),
+        OpenApiParameter(
+            name="subdistrict",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Subdistrict filter"
+        ),
+        OpenApiParameter(
+            name="ward",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Ward filter"
+        ),
+    ],
+    responses=SubdistrictCountSerializer(many=True),
+    tags=["SEUBDistribution"]
+)
 @api_view(['GET'])
 def subdistriccount(request):
 
@@ -577,6 +764,54 @@ def subdistriccount(request):
 
     return JsonResponse(payload, safe=False)
 
+
+@extend_schema(
+    summary="Ward Vehicle Count",
+    description="""
+    Returns total vehicles grouped by ward.
+
+    Supports filtering by:
+    - year
+    - province
+    - regency
+    - subdistrict
+    - ward
+    """,
+    parameters=[
+        OpenApiParameter(
+            name="year",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Vehicle year"
+        ),
+        OpenApiParameter(
+            name="province",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Province filter"
+        ),
+        OpenApiParameter(
+            name="regency",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Regency filter"
+        ),
+        OpenApiParameter(
+            name="subdistrict",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Subdistrict filter"
+        ),
+        OpenApiParameter(
+            name="ward",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Ward filter"
+        ),
+    ],
+    responses=WardCountSerializer(many=True),
+    tags=["Distribution"]
+)
 @api_view(['GET'])
 def wardcount(request):
 
@@ -642,7 +877,53 @@ def wardcount(request):
     return JsonResponse(payload, safe=False)
 
 
+@extend_schema(
+    summary="Province Vehicle Count",
+    description="""
+    Returns total vehicles grouped by province.
 
+    Supports filtering by:
+    - year
+    - province
+    - regency
+    - subdistrict
+    - ward
+    """,
+    parameters=[
+        OpenApiParameter(
+            name="year",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Vehicle year"
+        ),
+        OpenApiParameter(
+            name="province",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Province filter"
+        ),
+        OpenApiParameter(
+            name="regency",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Regency filter"
+        ),
+        OpenApiParameter(
+            name="subdistrict",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Subdistrict filter"
+        ),
+        OpenApiParameter(
+            name="ward",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Ward filter"
+        ),
+    ],
+    responses=ProvinceCountSerializer(many=True),
+    tags=["Distribution"]
+)
 def provincecount(request):
 
 
@@ -708,7 +989,16 @@ def provincecount(request):
     return JsonResponse(payload, safe=False)
 
 
+@extend_schema(
+    summary="Recipment Group Count",
+    description="""
+    Returns total vehicle count grouped by category_group_name (recipment group).
 
+    No filters applied.
+    """,
+    responses=RecipmentCountSerializer(many=True),
+    tags=["Distribution"]
+)
 @api_view(['GET'])
 def recipmentcount(request):
 
@@ -731,7 +1021,53 @@ select v.category_group_name  , count(v.vehicle_id ) from vehicles v group by v.
     return JsonResponse(payload, safe=False)
 
 
+@extend_schema(
+    summary="Jenis Alsintan Count",
+    description="""
+    Returns total count of vehicles grouped by vehicle name (jenis alsintan).
 
+    Supports filtering by:
+    - year
+    - province
+    - regency
+    - subdistrict
+    - ward
+    """,
+    parameters=[
+        OpenApiParameter(
+            name="year",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Vehicle year"
+        ),
+        OpenApiParameter(
+            name="province",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Province filter"
+        ),
+        OpenApiParameter(
+            name="regency",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Regency filter"
+        ),
+        OpenApiParameter(
+            name="subdistrict",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Subdistrict filter"
+        ),
+        OpenApiParameter(
+            name="ward",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Ward filter"
+        ),
+    ],
+    responses=JenisAlsintanSerializer(many=True),
+    tags=["Alsintan"]
+)
 @api_view(['GET'])
 def jenisalsintan(request):
 
@@ -796,8 +1132,58 @@ def jenisalsintan(request):
 
     return JsonResponse(payload, safe=False)
 
-@api_view(['GET'])
 
+
+@extend_schema(
+    summary="Recipient Group Engine Hours vs Distance",
+    description="""
+    Returns total engine hours and distance grouped by recipient group.
+
+    Filters:
+    - year
+    - province
+    - regency
+    - subdistrict
+    - ward
+
+    Only includes non-empty category_group_name values.
+    """,
+    parameters=[
+        OpenApiParameter(
+            name="year",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Vehicle year"
+        ),
+        OpenApiParameter(
+            name="province",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Province filter"
+        ),
+        OpenApiParameter(
+            name="regency",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Regency filter"
+        ),
+        OpenApiParameter(
+            name="subdistrict",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Subdistrict filter"
+        ),
+        OpenApiParameter(
+            name="ward",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Ward filter"
+        ),
+    ],
+    responses=RecipientGroupHourVsKmSerializer(many=True),
+    tags=["Analytics"]
+)
+@api_view(['GET'])
 def recipientgrouphourvskm(request):
 
     year = request.GET.get('year', '').strip()
@@ -878,7 +1264,53 @@ def recipientgrouphourvskm(request):
 
     return JsonResponse(payload, safe=False)
     
+@extend_schema(
+    summary="Province Engine Hours vs Distance",
+    description="""
+    Returns total engine hours and distance grouped by province.
 
+    Filters supported:
+    - year
+    - province
+    - regency
+    - subdistrict
+    - ward
+    """,
+    parameters=[
+        OpenApiParameter(
+            name="year",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Vehicle year"
+        ),
+        OpenApiParameter(
+            name="province",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Province filter"
+        ),
+        OpenApiParameter(
+            name="regency",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Regency filter"
+        ),
+        OpenApiParameter(
+            name="subdistrict",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Subdistrict filter"
+        ),
+        OpenApiParameter(
+            name="ward",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Ward filter"
+        ),
+    ],
+    responses=ProvHourVsKmSerializer(many=True),
+    tags=["Analytics"]
+)
  
 @api_view(['GET'])
 def provhourvskm(request):
@@ -959,7 +1391,55 @@ def provhourvskm(request):
         })
 
     return JsonResponse(payload, safe=False)
+@extend_schema(
+    summary="Regency Engine Hours vs Distance",
+    description="""
+    Returns total engine hours and distance grouped by regency.
 
+    Filters:
+    - year
+    - province
+    - regency
+    - subdistrict
+    - ward
+
+    Excludes empty regency and 'Brigade Dinas'.
+    """,
+    parameters=[
+        OpenApiParameter(
+            name="year",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Vehicle year"
+        ),
+        OpenApiParameter(
+            name="province",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Province filter"
+        ),
+        OpenApiParameter(
+            name="regency",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Regency filter"
+        ),
+        OpenApiParameter(
+            name="subdistrict",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Subdistrict filter"
+        ),
+        OpenApiParameter(
+            name="ward",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Ward filter"
+        ),
+    ],
+    responses=KabupatenHourVsKmSerializer(many=True),
+    tags=["Analytics"]
+)
 @api_view(['GET'])
 def kabupatenhourvskm(request):
 
@@ -1043,6 +1523,18 @@ def kabupatenhourvskm(request):
 
     return JsonResponse(payload, safe=False)
     
+
+@extend_schema(
+    summary="Vehicle Location Data",
+    description="""
+    Returns all vehicle coordinates along with province,
+    regency, and vehicle brand information.
+
+    Data is cached for 5 minutes.
+    """,
+    responses=PurJurnalSerializer(many=True),
+    tags=["Dashboard"]
+)
 
 @api_view(['GET'])
 def purjunal(request):
@@ -1229,7 +1721,55 @@ def selectdistribution(request, gn):
      
 
 
+extend_schema(
+    summary="Distribution by Recipient Group",
+    description="""
+    Returns vehicle distribution grouped by recipient group.
 
+    Supports filtering by:
+    - year
+    - province
+    - regency
+    - subdistrict
+    - ward
+
+    Includes a 'Total' row generated using SQL ROLLUP.
+    """,
+    parameters=[
+        OpenApiParameter(
+            name="year",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Vehicle year"
+        ),
+        OpenApiParameter(
+            name="province",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Province"
+        ),
+        OpenApiParameter(
+            name="regency",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Regency"
+        ),
+        OpenApiParameter(
+            name="subdistrict",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Subdistrict"
+        ),
+        OpenApiParameter(
+            name="ward",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Ward"
+        ),
+    ],
+    responses=DistributionSerializer(many=True),
+    tags=["Distribution"]
+)
 @api_view(['GET'])
 def distribution(request):
 
@@ -1304,7 +1844,24 @@ def distribution(request):
 
 
 
+@extend_schema(
+    summary="Service Center Locations",
+    description="""
+    Returns all service center locations.
 
+    Data includes:
+    - Service center name
+    - Coordinates
+    - Province
+    - Regency
+    - Address
+    - Phone number
+
+    Results are cached for 5 minutes.
+    """,
+    responses=ServiceSerializer(many=True),
+    tags=["Services"]
+)
 @api_view(['GET'])
 def services(request):
      
@@ -1358,7 +1915,18 @@ def services(request):
 # )
 
 
+@extend_schema(
+    summary="Vehicle Geofence Data",
+    description="""
+    Returns vehicle information used for geofence monitoring.
 
+    Currently event and time fields are placeholders and may be null.
+
+    Data is cached for 5 minutes.
+    """,
+    responses=GeofenceSerializer(many=True),
+    tags=["Geofence"]
+)
 @api_view(['GET'])
 def geofence(request):
 
@@ -1417,7 +1985,74 @@ def geofence(request):
     }
 )
 
+@extend_schema(
+    summary="Alsintan Data",
+    description="""
+    Returns vehicle/alsintan information.
 
+    Supports filtering by:
+    - jenis (vehicle_name)
+    - year
+    - province
+    - regency
+    - subdistrict
+    - ward
+    """,
+    parameters=[
+               OpenApiParameter(
+            name="_from",
+            type=str,
+            default="swagger",
+            required=False,
+            description="internal flag"
+        ),
+        OpenApiParameter(
+            name="jenis",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Vehicle type/name. Supports multiple values or comma-separated values."
+        ),
+ 
+        OpenApiParameter(
+            name="vehicle_name",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Alias for jenis."
+        ),
+        OpenApiParameter(
+            name="year",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Vehicle year"
+        ),
+        OpenApiParameter(
+            name="province",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Province"
+        ),
+        OpenApiParameter(
+            name="regency",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Regency"
+        ),
+        OpenApiParameter(
+            name="subdistrict",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Subdistrict"
+        ),
+        OpenApiParameter(
+            name="ward",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Ward"
+        ),
+    ],
+    responses=AlsintanSerializer(many=True),
+    tags=["Alsintan"]
+)
 @api_view(['GET'])
 def alsintan(request):
 
@@ -1427,128 +2062,145 @@ def alsintan(request):
     subdistrict = request.GET.get('subdistrict', '').strip()
     ward = request.GET.get('ward', '').strip()
 
-    qry = """
-    SELECT
-        v.vehicle_id,
-        v.vehicle_year,
-        v.vin,
-        v.engine_number,
-        v.vehicle_name,
-        v.vehicle_merk,
-        v.vehicle_type,
-        v.recipient_party,
-        v.recipient_group,
-        v.recipient_name,
-        v.phone_number,
-        v.recipient_address,
-        v.province,
-        v.regency,
-        v.subdistrict,
-        v.ward,
-        v.engine_hours,
-        v.distance_km,
-        v.latitude_longitude
-    FROM vehicles v
-    """
+    keyname =  "alistan" +year + province + regency + subdistrict + ward
 
-    conditions = []
-    params = []
+    print(keyname)
 
-    # Parse and clean multiple jenis parameter (supports repeated keys and comma separation)
-    raw_jenis = request.GET.getlist('jenis') + request.GET.getlist('vehicle_name')
-    jenis_list = []
-    for item in raw_jenis:
-        for val in item.split(','):
-            if val.strip():
-                jenis_list.append(val.strip())
-
-    if jenis_list:
-        lower_placeholders = ", ".join(["LOWER(%s)"] * len(jenis_list))
-        conditions.append(f"LOWER(v.vehicle_name) IN ({lower_placeholders})")
-        params.extend(jenis_list)
-
-    if year:
-        conditions.append("v.vehicle_year = %s")
-        params.append(year)
-
-    if province:
-        conditions.append("v.province ILIKE %s")
-        params.append(f"%{province}%")
-
-    if regency:
-        conditions.append("v.regency ILIKE %s")
-        params.append(f"%{regency}%")
-
-    if subdistrict:
-        conditions.append("v.subdistrict ILIKE %s")
-        params.append(f"%{subdistrict}%")
-
-    if ward:
-        conditions.append("v.ward ILIKE %s")
-        params.append(f"%{ward}%")
-
-    if conditions:
-        qry += " WHERE " + " AND ".join(conditions)
-
-
-    if cache.get("alsintan1") is not None:
+    if cache.get(keyname) is not None:
             print("Key exists")
              # print(cache.get("name"))
             print("Using Caching")
-            payload = cache.get("alsintan")
+            payload = cache.get(keyname)
     else:
+        print("Key not found")
+        qry = """
+        SELECT
+            v.vehicle_id,
+            v.vehicle_year,
+            v.vin,
+            v.engine_number,
+            v.vehicle_name,
+            v.vehicle_merk,
+            v.vehicle_type,
+            v.recipient_party,
+            v.recipient_group,
+            v.recipient_name,
+            v.phone_number,
+            v.recipient_address,
+            v.province,
+            v.regency,
+            v.subdistrict,
+            v.ward,
+            v.engine_hours,
+            v.distance_km,
+            v.latitude_longitude
+        FROM vehicles v
+        """
 
-        with connections['default'].cursor() as cursor:
-            cursor.execute(qry, params)
+        conditions = []
+        params = []
 
-            rows = cursor.fetchall()
-            
-            payload = []
+        # Parse and clean multiple jenis parameter (supports repeated keys and comma separation)
+        raw_jenis = request.GET.getlist('jenis') + request.GET.getlist('vehicle_name')
+        jenis_list = []
+        for item in raw_jenis:
+            for val in item.split(','):
+                if val.strip():
+                    jenis_list.append(val.strip())
 
-            for row in rows:
-                data = {}
-                latlong = row[18].split(",")
+        if jenis_list:
+            lower_placeholders = ", ".join(["LOWER(%s)"] * len(jenis_list))
+            conditions.append(f"LOWER(v.vehicle_name) IN ({lower_placeholders})")
+            params.extend(jenis_list)
+
+        if year:
+            conditions.append("v.vehicle_year = %s")
+            params.append(year)
+
+        if province:
+            conditions.append("v.province ILIKE %s")
+            params.append(f"%{province}%")
+
+        if regency:
+            conditions.append("v.regency ILIKE %s")
+            params.append(f"%{regency}%")
+
+        if subdistrict:
+            conditions.append("v.subdistrict ILIKE %s")
+            params.append(f"%{subdistrict}%")
+
+        if ward:
+            conditions.append("v.ward ILIKE %s")
+            params.append(f"%{ward}%")
+
+        if conditions:
+            qry += " WHERE " + " AND ".join(conditions)
+
+
+        if cache.get("alsintan1") is not None:
+                print("Key exists")
+                # print(cache.get("name"))
+                print("Using Caching")
+                payload = cache.get("alsintan")
+        else:
+
+            with connections['default'].cursor() as cursor:
+                cursor.execute(qry, params)
+
+                rows = cursor.fetchall()
                 
-                # print(latlong)
-                idx = 0
-                lat =""
-                long = ""
-                for la in latlong:
-                # print(lat)
-                    if idx ==0 or idx == 1:
-                        
-                        lat += la + "." if idx == 0 else la
-                    if idx == 2 or idx == 3:
-                        long +=la + "." if idx == 2 else la
+                payload = []
 
-                    idx+=1
+                for row in rows:
+                    data = {}
+                    latlong = row[18].split(",")
+                    
+                    # print(latlong)
+                    idx = 0
+                    lat =""
+                    long = ""
+                    for la in latlong:
+                    # print(lat)
+                        if idx ==0 or idx == 1:
+                            
+                            lat += la + "." if idx == 0 else la
+                        if idx == 2 or idx == 3:
+                            long +=la + "." if idx == 2 else la
 
-                data["id"] = row[0]
-                data["tahun"] = row[1]
-                data["nomorRangka"] = row[2]
-                data["nomorMesin"] = row[3]
-                data["namaBarang"] = row[4]
-                data["merk"] = row[5]
-                data["tipe"] = row[6]
-                data["pihak"] = row[7]
-                data["kelompok"] = row[8]
-                data["nama"] = row[9]
-                data["telp"] = row[10]
-                data["alamat"] = row[11]
-                data["provinsi"] = row[12]
-                data["kabupaten"] = row[13]
-                data["kecamatan"] = row[14]
-                data["kelurahan"] = row[15]
-                data["engineHour"] = row[16]
-                data["km"] = row[17]
-                data["lat"] = lat
-                data["lng"] = long
-                data["lastUpdated"] = None
-                payload.append(data)
-            # cache.set("alsintan", payload, timeout=300)    
+                        idx+=1
+
+                    data["id"] = row[0]
+                    data["tahun"] = row[1]
+                    data["nomorRangka"] = row[2]
+                    data["nomorMesin"] = row[3]
+                    data["namaBarang"] = row[4]
+                    data["merk"] = row[5]
+                    data["tipe"] = row[6]
+                    data["pihak"] = row[7]
+                    data["kelompok"] = row[8]
+                    data["nama"] = row[9]
+                    data["telp"] = row[10]
+                    data["alamat"] = row[11]
+                    data["provinsi"] = row[12]
+                    data["kabupaten"] = row[13]
+                    data["kecamatan"] = row[14]
+                    data["kelurahan"] = row[15]
+                    data["engineHour"] = row[16]
+                    data["km"] = row[17]
+                    data["lat"] = lat
+                    data["lng"] = long
+                    data["lastUpdated"] = None
+                    payload.append(data)
+                # cache.set("alsintan", payload, timeout=300)    
+
+        cache.set(keyname, payload, timeout=300) 
 
 
-    return JsonResponse(payload, safe=False)
+
+    is_swagger = request.GET.get("_from") == "swagger"
+    if is_swagger:
+        payload = payload[:100]  
+    return JsonResponse(payload[:10], safe=False)
 
     # return JsonResponse(   {
     #     "id": "ZH20241236352", 
@@ -1604,7 +2256,56 @@ def alsintan(request):
 
 # )
 
+@extend_schema(
+    summary="Average Engine Hours",
+    description="""
+    Returns the average engine hours for vehicles filtered by category and optional filters.
 
+    Notes:
+    - engine_hours is validated as numeric before averaging
+    - category is required as path parameter
+    """,
+    parameters=[
+        OpenApiParameter(
+            name="category",
+            type=str,
+            location=OpenApiParameter.PATH,
+            description="Vehicle category (e.g. alsintan, tractor, etc.)"
+        ),
+        OpenApiParameter(
+            name="year",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Vehicle year filter (if supported by build_filter_clause)"
+        ),
+        OpenApiParameter(
+            name="province",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Province filter"
+        ),
+        OpenApiParameter(
+            name="regency",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Regency filter"
+        ),
+        OpenApiParameter(
+            name="subdistrict",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Subdistrict filter"
+        ),
+        OpenApiParameter(
+            name="ward",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Ward filter"
+        ),
+    ],
+    responses=AverageEngineHoursSerializer,
+    tags=["Analytics"]
+)
 @api_view(['GET'])
 def average_engine_hours(request, category):
     category_lower = category.lower().strip()
@@ -1640,7 +2341,56 @@ def average_engine_hours(request, category):
         "average_engine_hours": avg_val
     })
 
+@extend_schema(
+    summary="Average Distance (KM)",
+    description="""
+    Returns the average distance (km) for vehicles filtered by category and optional filters.
 
+    Notes:
+    - distance_km is validated as numeric before averaging
+    - category is required as path parameter
+    """,
+    parameters=[
+        OpenApiParameter(
+            name="category",
+            type=str,
+            location=OpenApiParameter.PATH,
+            description="Vehicle category (e.g. alsintan, tractor, etc.)"
+        ),
+        OpenApiParameter(
+            name="year",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Vehicle year filter (if supported by build_filter_clause)"
+        ),
+        OpenApiParameter(
+            name="province",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Province filter"
+        ),
+        OpenApiParameter(
+            name="regency",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Regency filter"
+        ),
+        OpenApiParameter(
+            name="subdistrict",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Subdistrict filter"
+        ),
+        OpenApiParameter(
+            name="ward",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Ward filter"
+        ),
+    ],
+    responses=AverageDistanceKmSerializer,
+    tags=["Analytics"]
+)
 @api_view(['GET'])
 def average_distance_km(request, category):
     category_lower = category.lower().strip()
