@@ -11,7 +11,13 @@ urlpatterns = [
     path('alsintan', views.alsintan, name='alsintan'),
     path('distribution', views.distribution, name='distribution'),
     path('distributiondetail/<str:refas>/', views.testdrive, name='testdrive'),
+    path('distributiondetail1/<str:refas>/', views.monitoringalshintant, name='monitoringalshintant'),
+
+
+    
     path('distributiondetail/<str:refas>/<str:status>/', views.testdrive_detail, name='testdrive_detail'),
+
+
     path('selectdistribution/<str:gn>/', views.selectdistribution, name='selectdistribution'),
     path('kabupatenhourvskm', views.kabupatenhourvskm, name='kabupatenhourvskm'),
     path('recipientgrouphourvskm', views.recipientgrouphourvskm, name='recipientgrouphourvskm'),
