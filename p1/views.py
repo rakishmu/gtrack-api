@@ -86,11 +86,6 @@ def longlatExtractor(longlat):
 )
 @api_view(['GET'])
 def testdrive(request,refas):
-
-
-
-
-
     print("this giw")
     
     bergerak = 0
@@ -106,7 +101,13 @@ def testdrive(request,refas):
 
 
 
-    year = request.GET.get('year', '').strip()
+    raw_year = request.GET.getlist('year')
+    year_list = []
+    for item in raw_year:
+        for val in item.split(','):
+            if val.strip():
+                year_list.append(val.strip())
+
     province = request.GET.get('province', '').strip()
     regency = request.GET.get('regency', '').strip()
     subdistrict = request.GET.get('subdistrict', '').strip()
@@ -124,9 +125,10 @@ def testdrive(request,refas):
         params.append(f"%{refas}%")
 
     # location filters
-    if year:
-        conditions.append("v.vehicle_year = %s")
-        params.append(year)
+    if year_list:
+        placeholders = ", ".join(["%s"] * len(year_list))
+        conditions.append(f"v.vehicle_year IN ({placeholders})")
+        params.extend(year_list)
 
     if province:
         conditions.append("v.province ILIKE %s")
