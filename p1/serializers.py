@@ -55,6 +55,20 @@ class AlsintanSerializer(serializers.Serializer):
     lastUpdated = serializers.CharField(allow_null=True)
 
 
+class AlsintanPaginatedSerializer(serializers.Serializer):
+    total_items = serializers.IntegerField()
+    total_pages = serializers.IntegerField()
+    current_page = serializers.IntegerField()
+    limit = serializers.IntegerField()
+    offset = serializers.IntegerField()
+    results = AlsintanSerializer(many=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['from'] = serializers.IntegerField(allow_null=True)
+        self.fields['to'] = serializers.IntegerField(allow_null=True)
+
+
 class DistributionSerializer(serializers.Serializer):
     group_name = serializers.CharField()
     total = serializers.IntegerField()

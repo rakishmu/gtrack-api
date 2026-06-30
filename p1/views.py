@@ -2278,8 +2278,28 @@ def geofence(request):
             location=OpenApiParameter.QUERY,
             description="Ward"
         ),
+        OpenApiParameter(
+            name="page",
+            type=int,
+            location=OpenApiParameter.QUERY,
+            description="Page number (default: 1)",
+            default=1
+        ),
+        OpenApiParameter(
+            name="limit",
+            type=int,
+            location=OpenApiParameter.QUERY,
+            description="Limit of items per page (default: 10)",
+            default=10
+        ),
+        OpenApiParameter(
+            name="offset",
+            type=int,
+            location=OpenApiParameter.QUERY,
+            description="Offset for pagination (overrides page if provided)"
+        ),
     ],
-    responses=AlsintanSerializer(many=True),
+    responses=AlsintanPaginatedSerializer(),
     tags=["Alsintan"]
 )
 @api_view(['GET'])
@@ -2309,8 +2329,7 @@ def alsintan(request):
     # Build cache key using sorted values to ensure consistency
     sorted_years = sorted(list(set(year_list)))
     sorted_jenis = sorted(list(set(jenis_list)))
-    print("Sorted Years:", sorted_years)
-    print("Sorted Jenis:", sorted_jenis)
+    
     keyname = (
         "alsintan_"
         + ",".join(sorted_years) + "_"
@@ -2434,12 +2453,70 @@ def alsintan(request):
 
         cache.set(keyname, payload, timeout=300) 
 
+    # Pagination parameters
+    try:
+        page = int(request.GET.get('page', 1))
+    except ValueError:
+        page = 1
 
+    try:
+        limit = int(request.GET.get('limit', 10))
+    except ValueError:
+        limit = 10
 
-    is_swagger = request.GET.get("_from") == "swagger"
-    if is_swagger:
-        payload = payload[:100]  
-    return JsonResponse(payload[:10], safe=False)
+    # offset_param = request.GET.get('offset', None)
+    # if offset_param is not None:
+    #     try:
+    #         offset = int(offset_param)
+    #         if limit > 0:
+    #             page = (offset // limit) + 1
+    #         else:
+    #             page = 1
+    #     except ValueError:
+    #         offset = (page - 1) * limit
+    # else:
+    offset = (page - 1) * limit
+
+    # Apply slicing on payload
+    total_items = len(payload)
+    
+    if limit <= 0:
+        paginated_results = payload
+        total_pages = 1
+        current_page = 1
+        offset = 0
+        limit = total_items
+    else:
+        if offset < 0:
+            offset = 0
+        start_idx = offset
+        end_idx = offset + limit
+        paginated_results = payload[start_idx:end_idx]
+        
+        import math
+        total_pages = math.ceil(total_items / limit) if limit > 0 else 1
+        current_page = page
+
+    # Calculate from and to item indices
+    if len(paginated_results) == 0:
+        from_val = None
+        to_val = None
+    else:
+        from_val = offset + 1
+        to_val = offset + len(paginated_results)
+
+    response_data = {
+        "total_items": total_items,
+        "total_pages": total_pages,
+        "current_page": current_page,
+        "limit": limit,
+        "offset": offset,
+        "from": from_val,
+        "to": to_val,
+        "results": paginated_results
+    }
+
+    return JsonResponse(response_data, safe=False)
 
     # return JsonResponse(   {
     #     "id": "ZH20241236352", 
