@@ -2285,21 +2285,48 @@ def geofence(request):
 @api_view(['GET'])
 def alsintan(request):
 
-    year = request.GET.get('year', '').strip()
+    # Parse and clean multiple year parameter (supports repeated keys and comma separation)
+    raw_year = request.GET.getlist('year')
+    year_list = []
+    for item in raw_year:
+        for val in item.split(','):
+            if val.strip():
+                year_list.append(val.strip())
+
+    # Parse and clean multiple jenis parameter (supports repeated keys and comma separation)
+    raw_jenis = request.GET.getlist('jenis') + request.GET.getlist('vehicle_name')
+    jenis_list = []
+    for item in raw_jenis:
+        for val in item.split(','):
+            if val.strip():
+                jenis_list.append(val.strip())
+
     province = request.GET.get('province', '').strip()
     regency = request.GET.get('regency', '').strip()
     subdistrict = request.GET.get('subdistrict', '').strip()
     ward = request.GET.get('ward', '').strip()
 
-    keyname =  "alistan" +year + province + regency + subdistrict + ward
+    # Build cache key using sorted values to ensure consistency
+    sorted_years = sorted(list(set(year_list)))
+    sorted_jenis = sorted(list(set(jenis_list)))
+    print("Sorted Years:", sorted_years)
+    print("Sorted Jenis:", sorted_jenis)
+    keyname = (
+        "alsintan_"
+        + ",".join(sorted_years) + "_"
+        + ",".join(sorted_jenis) + "_"
+        + province + "_"
+        + regency + "_"
+        + subdistrict + "_"
+        + ward
+    )
 
     print(keyname)
 
     if cache.get(keyname) is not None:
-            print("Key exists")
-             # print(cache.get("name"))
-            print("Using Caching")
-            payload = cache.get(keyname)
+        print("Key exists")
+        print("Using Caching")
+        payload = cache.get(keyname)
     else:
         print("Key not found")
         qry = """
@@ -2329,22 +2356,15 @@ def alsintan(request):
         conditions = []
         params = []
 
-        # Parse and clean multiple jenis parameter (supports repeated keys and comma separation)
-        raw_jenis = request.GET.getlist('jenis') + request.GET.getlist('vehicle_name')
-        jenis_list = []
-        for item in raw_jenis:
-            for val in item.split(','):
-                if val.strip():
-                    jenis_list.append(val.strip())
-
         if jenis_list:
             lower_placeholders = ", ".join(["LOWER(%s)"] * len(jenis_list))
             conditions.append(f"LOWER(v.vehicle_name) IN ({lower_placeholders})")
             params.extend(jenis_list)
 
-        if year:
-            conditions.append("v.vehicle_year = %s")
-            params.append(year)
+        if year_list:
+            placeholders = ", ".join(["%s"] * len(year_list))
+            conditions.append(f"v.vehicle_year IN ({placeholders})")
+            params.extend(year_list)
 
         if province:
             conditions.append("v.province ILIKE %s")
@@ -2365,62 +2385,52 @@ def alsintan(request):
         if conditions:
             qry += " WHERE " + " AND ".join(conditions)
 
+        with connections['default'].cursor() as cursor:
+            cursor.execute(qry, params)
+            rows = cursor.fetchall()
+            
+            payload = []
 
-        if cache.get("alsintan1") is not None:
-                print("Key exists")
-                # print(cache.get("name"))
-                print("Using Caching")
-                payload = cache.get("alsintan")
-        else:
-
-            with connections['default'].cursor() as cursor:
-                cursor.execute(qry, params)
-
-                rows = cursor.fetchall()
+            for row in rows:
+                data = {}
+                latlong = row[18].split(",")
                 
-                payload = []
+                # print(latlong)
+                idx = 0
+                lat =""
+                long = ""
+                for la in latlong:
+                # print(lat)
+                    if idx ==0 or idx == 1:
+                        
+                        lat += la + "." if idx == 0 else la
+                    if idx == 2 or idx == 3:
+                        long +=la + "." if idx == 2 else la
 
-                for row in rows:
-                    data = {}
-                    latlong = row[18].split(",")
-                    
-                    # print(latlong)
-                    idx = 0
-                    lat =""
-                    long = ""
-                    for la in latlong:
-                    # print(lat)
-                        if idx ==0 or idx == 1:
-                            
-                            lat += la + "." if idx == 0 else la
-                        if idx == 2 or idx == 3:
-                            long +=la + "." if idx == 2 else la
+                    idx+=1
 
-                        idx+=1
-
-                    data["id"] = row[0]
-                    data["tahun"] = row[1]
-                    data["nomorRangka"] = row[2]
-                    data["nomorMesin"] = row[3]
-                    data["namaBarang"] = row[4]
-                    data["merk"] = row[5]
-                    data["tipe"] = row[6]
-                    data["pihak"] = row[7]
-                    data["kelompok"] = row[8]
-                    data["nama"] = row[9]
-                    data["telp"] = row[10]
-                    data["alamat"] = row[11]
-                    data["provinsi"] = row[12]
-                    data["kabupaten"] = row[13]
-                    data["kecamatan"] = row[14]
-                    data["kelurahan"] = row[15]
-                    data["engineHour"] = row[16]
-                    data["km"] = row[17]
-                    data["lat"] = lat
-                    data["lng"] = long
-                    data["lastUpdated"] = None
-                    payload.append(data)
-                # cache.set("alsintan", payload, timeout=300)    
+                data["id"] = row[0]
+                data["tahun"] = row[1]
+                data["nomorRangka"] = row[2]
+                data["nomorMesin"] = row[3]
+                data["namaBarang"] = row[4]
+                data["merk"] = row[5]
+                data["tipe"] = row[6]
+                data["pihak"] = row[7]
+                data["kelompok"] = row[8]
+                data["nama"] = row[9]
+                data["telp"] = row[10]
+                data["alamat"] = row[11]
+                data["provinsi"] = row[12]
+                data["kabupaten"] = row[13]
+                data["kecamatan"] = row[14]
+                data["kelurahan"] = row[15]
+                data["engineHour"] = row[16]
+                data["km"] = row[17]
+                data["lat"] = lat
+                data["lng"] = long
+                data["lastUpdated"] = None
+                payload.append(data)
 
         cache.set(keyname, payload, timeout=300) 
 
